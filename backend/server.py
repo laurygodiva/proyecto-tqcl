@@ -89,6 +89,8 @@ DEFAULT_STATE: Dict[str, Any] = {
     "missions": {"laury": [], "danny": []},
     "coins": {"laury": 0, "danny": 0},
     "achievements": {"laury": [], "danny": []},
+    "inventory": {"laury": [], "danny": []},
+    "calendar": {},
     "relationshipStartDate": "2026-01-09T00:00:00Z",
     "lastUpdated": datetime.now(timezone.utc).isoformat(),
 }
@@ -139,6 +141,54 @@ class AchievementCreate(BaseModel):
 class AchievementAction(BaseModel):
     targetUser: Literal["laury", "danny"]
     achievementId: str
+
+
+SHOP_ITEMS = [
+    {"id": "i_beso", "name": "Beso Especial", "icon": "💋", "price": 5, "desc": "Un beso al ganador del día"},
+    {"id": "i_masaje", "name": "Masaje 15min", "icon": "💆", "price": 15, "desc": "Masaje de 15 minutos"},
+    {"id": "i_cena", "name": "Cena Sorpresa", "icon": "🍝", "price": 30, "desc": "Cena cocinada con amor"},
+    {"id": "i_peli", "name": "Noche de Peli", "icon": "🎬", "price": 20, "desc": "Tú eliges la película"},
+    {"id": "i_desayuno", "name": "Desayuno en Cama", "icon": "🥐", "price": 25, "desc": "Mimitos al despertar"},
+    {"id": "i_baño", "name": "Baño Relajante", "icon": "🛁", "price": 35, "desc": "Velas, música y sales"},
+    {"id": "i_juego", "name": "Sesión de Juegos", "icon": "🎮", "price": 10, "desc": "Tarde de gaming juntos"},
+    {"id": "i_cita", "name": "Cita Sorpresa", "icon": "💕", "price": 80, "desc": "Una cita inolvidable"},
+    {"id": "i_regalo", "name": "Regalo Sorpresa", "icon": "🎁", "price": 50, "desc": "Algo especial para ti"},
+    {"id": "i_postre", "name": "Postre Hecho a Mano", "icon": "🍰", "price": 18, "desc": "Postre casero"},
+    {"id": "i_pasion", "name": "Noche Apasionada", "icon": "🔥", "price": 100, "desc": "Noche solo para nosotros"},
+    {"id": "i_carta", "name": "Carta de Amor", "icon": "💌", "price": 8, "desc": "Una carta sincera"},
+]
+
+ROULETTES = {
+    "comer": {"name": "¿Dónde comemos?", "icon": "🍽️", "options": ["Pizza", "Hamburguesa", "Sushi", "Comida China", "Mexicano", "Italiano", "Tapas", "Casa - Cocinar juntos", "McDonalds", "Burger King", "Kebab", "Ensalada saludable"]},
+    "plan": {"name": "¿Qué plan hacemos?", "icon": "🎯", "options": ["Cine", "Paseo por el parque", "Tarde de mantita y peli", "Cocinar juntos", "Ir a la playa", "Spa en casa", "Salir de compras", "Jugar a juegos de mesa", "Karaoke", "Cena romántica", "Ruta turística", "Día de aventura"]},
+    "jugar": {"name": "¿A qué jugamos?", "icon": "🎮", "options": ["It Takes Two", "Mario Kart", "Fortnite", "Among Us", "Stardew Valley", "Monopoly", "UNO", "Trivial", "Dardos", "Karaoke", "Just Dance", "Minecraft"]},
+    "peli": {"name": "¿Qué peli vemos?", "icon": "🎬", "options": ["Comedia romántica", "Acción", "Terror", "Animación", "Drama", "Ciencia ficción", "Disney", "Marvel", "Anime", "Clásico", "Documental", "Sorpresa de Netflix"]},
+}
+
+
+class BuyItemRequest(BaseModel):
+    userId: Literal["laury", "danny"]
+    itemId: str
+
+
+class GiftItemRequest(BaseModel):
+    fromUser: Literal["laury", "danny"]
+    toUser: Literal["laury", "danny"]
+    inventoryItemId: str
+
+
+class MinigameResult(BaseModel):
+    userId: Literal["laury", "danny"]
+    gameId: str
+    reward: int
+
+
+class CalendarEntryRequest(BaseModel):
+    userId: Literal["laury", "danny"]
+    date: str  # YYYY-MM-DD
+    mood: Optional[str] = None  # emoji
+    note: Optional[str] = None
+    period: Optional[bool] = None  # solo laury
 
 
 # ============ Helpers ============
@@ -307,6 +357,130 @@ async def delete_achievement(req: AchievementAction):
         {"$set": {"achievements": achievements, "lastUpdated": datetime.now(timezone.utc).isoformat()}},
     )
     return {"achievements": achievements}
+
+
+@api_router.get("/shop")
+async def get_shop():
+    return {"items": SHOP_ITEMS, "roulettes": ROULETTES}
+
+
+@api_router.post("/state/shop/buy")
+async def buy_item(req: BuyItemRequest):
+    item = next((i for i in SHOP_ITEMS if i["id"] == req.itemId), None)
+    if not item:
+        raise HTTPException(404, "Item no encontrado")
+    doc = await ensure_state()
+    coins = doc.get("coins", {"laury": 0, "danny": 0})
+    if coins.get(req.userId, 0) < item["price"]:
+        raise HTTPException(400, "Monedas insuficientes")
+    coins[req.userId] = int(coins[req.userId]) - int(item["price"])
+    inv = doc.get("inventory", {"laury": [], "danny": []})
+    if not isinstance(inv.get(req.userId), list):
+        inv[req.userId] = []
+    inv_item = {
+        "id": f"inv_{uuid.uuid4().hex[:10]}",
+        "itemId": item["id"],
+        "name": item["name"],
+        "icon": item["icon"],
+        "desc": item["desc"],
+        "acquiredAt": datetime.now(timezone.utc).isoformat(),
+    }
+    inv[req.userId].append(inv_item)
+    await db.state.update_one(
+        {"_id": COUPLE_DOC_ID},
+        {"$set": {"coins": coins, "inventory": inv, "lastUpdated": datetime.now(timezone.utc).isoformat()}},
+    )
+    return {"coins": coins, "inventory": inv, "added": inv_item}
+
+
+@api_router.post("/state/shop/gift")
+async def gift_item(req: GiftItemRequest):
+    if req.fromUser == req.toUser:
+        raise HTTPException(400, "No puedes regalarte a ti mismo")
+    doc = await ensure_state()
+    inv = doc.get("inventory", {"laury": [], "danny": []})
+    from_list = inv.get(req.fromUser, [])
+    item = next((x for x in from_list if x.get("id") == req.inventoryItemId), None)
+    if not item:
+        raise HTTPException(404, "Item no encontrado en el inventario")
+    inv[req.fromUser] = [x for x in from_list if x.get("id") != req.inventoryItemId]
+    if not isinstance(inv.get(req.toUser), list):
+        inv[req.toUser] = []
+    item_for_target = dict(item)
+    item_for_target["giftedBy"] = req.fromUser
+    item_for_target["giftedAt"] = datetime.now(timezone.utc).isoformat()
+    inv[req.toUser].append(item_for_target)
+    await db.state.update_one(
+        {"_id": COUPLE_DOC_ID},
+        {"$set": {"inventory": inv, "lastUpdated": datetime.now(timezone.utc).isoformat()}},
+    )
+    return {"inventory": inv}
+
+
+@api_router.post("/state/minigame/play")
+async def play_minigame(req: MinigameResult):
+    # Cuesta 1 moneda jugar; reward viene del frontend después del juego
+    doc = await ensure_state()
+    coins = doc.get("coins", {"laury": 0, "danny": 0})
+    if coins.get(req.userId, 0) < 1:
+        raise HTTPException(400, "Necesitas al menos 1 moneda para jugar")
+    coins[req.userId] = int(coins[req.userId]) - 1 + int(req.reward)
+    await db.state.update_one(
+        {"_id": COUPLE_DOC_ID},
+        {"$set": {"coins": coins, "lastUpdated": datetime.now(timezone.utc).isoformat()}},
+    )
+    return {"coins": coins, "gained": req.reward, "spent": 1}
+
+
+@api_router.post("/state/calendar")
+async def upsert_calendar(req: CalendarEntryRequest):
+    doc = await ensure_state()
+    cal = doc.get("calendar", {})
+    if not isinstance(cal, dict):
+        cal = {}
+    entry = cal.get(req.date) or {"moods": {}, "notes": [], "period": False}
+    if not isinstance(entry, dict):
+        entry = {"moods": {}, "notes": [], "period": False}
+    entry.setdefault("moods", {})
+    entry.setdefault("notes", [])
+    if "period" not in entry:
+        entry["period"] = False
+    if req.mood is not None:
+        entry["moods"][req.userId] = req.mood
+    if req.note:
+        entry["notes"].append({
+            "id": f"n_{uuid.uuid4().hex[:8]}",
+            "by": req.userId,
+            "text": req.note,
+            "at": datetime.now(timezone.utc).isoformat(),
+        })
+    if req.period is not None and req.userId == "laury":
+        entry["period"] = bool(req.period)
+    cal[req.date] = entry
+    await db.state.update_one(
+        {"_id": COUPLE_DOC_ID},
+        {"$set": {"calendar": cal, "lastUpdated": datetime.now(timezone.utc).isoformat()}},
+    )
+    return {"calendar": cal}
+
+
+@api_router.post("/state/calendar/delete_note")
+async def delete_calendar_note(payload: Dict[str, Any]):
+    date = payload.get("date")
+    note_id = payload.get("noteId")
+    if not date or not note_id:
+        raise HTTPException(400, "Faltan parámetros")
+    doc = await ensure_state()
+    cal = doc.get("calendar", {}) or {}
+    entry = cal.get(date)
+    if entry and isinstance(entry.get("notes"), list):
+        entry["notes"] = [n for n in entry["notes"] if n.get("id") != note_id]
+        cal[date] = entry
+        await db.state.update_one(
+            {"_id": COUPLE_DOC_ID},
+            {"$set": {"calendar": cal, "lastUpdated": datetime.now(timezone.utc).isoformat()}},
+        )
+    return {"calendar": cal}
 
 @api_router.post("/state/reset")
 async def reset_state():

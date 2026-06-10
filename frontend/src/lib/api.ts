@@ -70,6 +70,37 @@ export interface Achievement {
   createdAt: string;
 }
 
+export interface InventoryItem {
+  id: string;
+  itemId: string;
+  name: string;
+  icon: string;
+  desc: string;
+  acquiredAt: string;
+  giftedBy?: UserId;
+  giftedAt?: string;
+}
+
+export interface ShopItem {
+  id: string;
+  name: string;
+  icon: string;
+  price: number;
+  desc: string;
+}
+
+export interface Roulette {
+  name: string;
+  icon: string;
+  options: string[];
+}
+
+export interface CalendarEntry {
+  moods?: Partial<Record<UserId, string>>;
+  notes?: { id: string; by: UserId; text: string; at: string }[];
+  period?: boolean;
+}
+
 export interface CoupleState {
   userData: UserData;
   bubbles: Record<UserId, BubbleState>;
@@ -78,6 +109,8 @@ export interface CoupleState {
   missions: Record<UserId, Mission[]>;
   coins: Record<UserId, number>;
   achievements: Record<UserId, Achievement[]>;
+  inventory: Record<UserId, InventoryItem[]>;
+  calendar: Record<string, CalendarEntry>;
   relationshipStartDate: string;
   lastUpdated: string;
 }
@@ -125,6 +158,32 @@ export const api = {
     request<{ achievements: Record<UserId, Achievement[]> }>("/state/achievements/delete", {
       method: "POST",
       body: JSON.stringify({ targetUser, achievementId }),
+    }),
+  getShop: () => request<{ items: ShopItem[]; roulettes: Record<string, Roulette> }>("/shop"),
+  buyItem: (userId: UserId, itemId: string) =>
+    request<{ coins: Record<UserId, number>; inventory: Record<UserId, InventoryItem[]>; added: InventoryItem }>(
+      "/state/shop/buy",
+      { method: "POST", body: JSON.stringify({ userId, itemId }) },
+    ),
+  giftItem: (fromUser: UserId, toUser: UserId, inventoryItemId: string) =>
+    request<{ inventory: Record<UserId, InventoryItem[]> }>("/state/shop/gift", {
+      method: "POST",
+      body: JSON.stringify({ fromUser, toUser, inventoryItemId }),
+    }),
+  playMinigame: (userId: UserId, gameId: string, reward: number) =>
+    request<{ coins: Record<UserId, number>; gained: number; spent: number }>(
+      "/state/minigame/play",
+      { method: "POST", body: JSON.stringify({ userId, gameId, reward }) },
+    ),
+  upsertCalendar: (userId: UserId, date: string, payload: { mood?: string; note?: string; period?: boolean }) =>
+    request<{ calendar: Record<string, CalendarEntry> }>("/state/calendar", {
+      method: "POST",
+      body: JSON.stringify({ userId, date, ...payload }),
+    }),
+  deleteCalendarNote: (date: string, noteId: string) =>
+    request<{ calendar: Record<string, CalendarEntry> }>("/state/calendar/delete_note", {
+      method: "POST",
+      body: JSON.stringify({ date, noteId }),
     }),
 };
 

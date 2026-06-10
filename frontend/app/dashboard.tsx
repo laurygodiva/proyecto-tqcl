@@ -14,6 +14,7 @@ import NeonSheet from "../src/components/NeonSheet";
 import CoinIcon from "../src/components/CoinIcon";
 import { MissionCreator, MissionList } from "../src/components/Missions";
 import { AchievementCreator, AchievementList } from "../src/components/Achievements";
+import { ShopSheet, InventorySheet, MinigamesSheet, RouletteSheet, CalendarSheet } from "../src/components/CoreSheets";
 
 const { width: W } = Dimensions.get("window");
 const CARD_W = (W - 56) / 2;
@@ -63,6 +64,7 @@ export default function Dashboard() {
   const [achCreate, setAchCreate] = useState<UserId | null>(null);
   const [achList, setAchList] = useState<UserId | null>(null);
   const [openMenu, setOpenMenu] = useState<UserId | null>(null);
+  const [actionSheet, setActionSheet] = useState<"shop" | "minigames" | "roulette" | "calendar" | "inventory" | null>(null);
   const [glowTick, setGlowTick] = useState(0);
   const [avatarOptions, setAvatarOptions] = useState<Record<UserId, { label: string; url: string }[]>>({ laury: [], danny: [] });
   const [plusOnes, setPlusOnes] = useState<number[]>([]);
@@ -291,9 +293,33 @@ export default function Dashboard() {
                       <Ionicons name="trophy" size={12} color={uc.light} />
                       <Text style={[styles.smallBtnText, { color: uc.light }]}>LOGROS ({(state.achievements?.[uid] || []).length})</Text>
                     </Pressable>
+                    {isMe && (
+                      <Pressable onPress={() => { setActionSheet("inventory"); setOpenMenu(null); }} style={[styles.smallBtn, { borderColor: `${uc.light}55` }]} testID={`view-items-${uid}`}>
+                        <Ionicons name="bag-handle" size={12} color={uc.light} />
+                        <Text style={[styles.smallBtnText, { color: uc.light }]}>ITEMS ({(state.inventory?.[uid] || []).length})</Text>
+                      </Pressable>
+                    )}
                   </View>
                 )}
               </View>
+            );
+          })}
+        </View>
+
+        {/* 4 botones de acciones principales */}
+        <View style={styles.actionsRow}>
+          {[
+            { id: "minigames" as const, label: "MINIJUEGOS", icon: "game-controller" as const },
+            { id: "roulette" as const, label: "RULETA", icon: "disc" as const },
+            { id: "calendar" as const, label: "CALENDARIO", icon: "calendar" as const },
+            { id: "shop" as const, label: "TIENDA", icon: "cart" as const },
+          ].map((b, idx) => {
+            const alt = idx % 2 === 0 ? userColors.laury : userColors.danny;
+            return (
+              <Pressable key={b.id} onPress={() => setActionSheet(b.id)} style={[styles.actionBtn, { borderColor: alt.light, shadowColor: alt.glow }]} testID={`action-${b.id}`}>
+                <Ionicons name={b.icon} size={20} color={alt.light} />
+                <Text style={[styles.actionLabel, { color: alt.light }]}>{b.label}</Text>
+              </Pressable>
             );
           })}
         </View>
@@ -434,6 +460,53 @@ export default function Dashboard() {
           onCreatePress={me !== achList ? () => { const t = achList; setAchList(null); setAchCreate(t); } : undefined}
         />
       )}
+
+      <ShopSheet
+        visible={actionSheet === "shop"}
+        onClose={() => setActionSheet(null)}
+        me={me}
+        coins={coins[me] ?? 0}
+        onBought={(c, inv) => optimistic((s) => ({ ...s, coins: c, inventory: inv }))}
+        light={myColors.light}
+        glow={myColors.glow}
+      />
+
+      <InventorySheet
+        visible={actionSheet === "inventory"}
+        onClose={() => setActionSheet(null)}
+        me={me}
+        inventory={state.inventory?.[me] || []}
+        light={myColors.light}
+        glow={myColors.glow}
+        onGifted={(inv) => optimistic((s) => ({ ...s, inventory: inv }))}
+      />
+
+      <MinigamesSheet
+        visible={actionSheet === "minigames"}
+        onClose={() => setActionSheet(null)}
+        me={me}
+        coins={coins[me] ?? 0}
+        light={myColors.light}
+        glow={myColors.glow}
+        onResult={(c) => { optimistic((s) => ({ ...s, coins: c })); setGlowTick((g) => g + 1); }}
+      />
+
+      <RouletteSheet
+        visible={actionSheet === "roulette"}
+        onClose={() => setActionSheet(null)}
+        light={myColors.light}
+        glow={myColors.glow}
+      />
+
+      <CalendarSheet
+        visible={actionSheet === "calendar"}
+        onClose={() => setActionSheet(null)}
+        me={me}
+        calendar={state.calendar || {}}
+        light={myColors.light}
+        glow={myColors.glow}
+        onUpdate={(cal) => optimistic((s) => ({ ...s, calendar: cal }))}
+      />
     </SafeAreaView>
   );
 }
@@ -479,4 +552,7 @@ const styles = StyleSheet.create({
   updateBtnText: { fontSize: 12, fontWeight: "900", letterSpacing: 2 },
   avatarPreviewWrap: { alignItems: "center", marginBottom: 6 },
   avatarPreview: { width: 110, height: 110, borderRadius: 14, backgroundColor: colors.bg },
+  actionsRow: { flexDirection: "row", gap: 8, paddingHorizontal: 12, marginTop: 16, justifyContent: "space-between" },
+  actionBtn: { flex: 1, paddingVertical: 12, paddingHorizontal: 4, borderRadius: 12, borderWidth: 1.5, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center", gap: 4, shadowOpacity: 0.4, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } },
+  actionLabel: { fontSize: 9, fontWeight: "900", letterSpacing: 0.8 },
 });
