@@ -79,9 +79,10 @@ interface ListProps {
   glow: string;
   ownerName: string;
   onDelete: (a: Achievement) => void;
+  onCreatePress?: () => void;
 }
 
-export function AchievementList({ visible, onClose, items, light, glow, ownerName, onDelete }: ListProps) {
+export function AchievementList({ visible, onClose, items, light, glow, ownerName, onDelete, onCreatePress }: ListProps) {
   const formatDate = (iso: string) => {
     try {
       const d = new Date(iso);
@@ -90,6 +91,12 @@ export function AchievementList({ visible, onClose, items, light, glow, ownerNam
   };
   return (
     <NeonSheet visible={visible} onClose={onClose} title={`LOGROS DE ${ownerName.toUpperCase()}`} light={light} glow={glow}>
+      {onCreatePress && (
+        <Pressable onPress={onCreatePress} style={[s.topCreate, { borderColor: light, backgroundColor: `${light}22` }]} testID="open-create-achievement">
+          <Ionicons name="add-circle" size={16} color={light} />
+          <Text style={[s.topCreateText, { color: light }]}>CREAR LOGRO</Text>
+        </Pressable>
+      )}
       {items.length === 0 && <Text style={s.empty}>Sin logros aún</Text>}
       {items.map((a) => {
         const rc = rarityColors[a.rarity];
@@ -131,4 +138,6 @@ const s = StyleSheet.create({
   cardDesc: { color: colors.textDim, fontSize: 11, marginTop: 2 },
   cardDate: { color: colors.textDim, fontSize: 9, marginTop: 4, fontStyle: "italic" },
   iconBtn: { width: 28, height: 28, borderRadius: 8, borderWidth: 1.5, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface, alignSelf: "center" },
+  topCreate: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 12, borderRadius: 10, borderWidth: 1.5, marginBottom: 10 },
+  topCreateText: { fontSize: 12, fontWeight: "900", letterSpacing: 2 },
 });

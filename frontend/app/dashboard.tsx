@@ -269,7 +269,7 @@ export default function Dashboard() {
             return (
               <View key={uid} style={{ alignItems: "center" }}>
                 <Pressable onPress={() => setOpenMenu(openMenu === uid ? null : uid)} testID={`name-${uid}`}>
-                  <Text style={[styles.nameLabel, { color: uc.light, textShadowColor: uc.glow }]}>{uid === "laury" ? "Laury" : "Danny"} ▾</Text>
+                  <Text style={[styles.nameLabel, { color: uc.light, textShadowColor: uc.glow }]}>{uid === "laury" ? `▾ Laury` : `Danny ▾`}</Text>
                 </Pressable>
                 <Pressable
                   onPress={() => isMe && setAvatarSheet(uid)}
@@ -283,22 +283,10 @@ export default function Dashboard() {
                 </Pressable>
                 {openMenu === uid && (
                   <View style={styles.cardBtns}>
-                    {!isMe && (
-                      <Pressable onPress={() => { setMissionCreate(uid); setOpenMenu(null); }} style={[styles.smallBtn, { borderColor: `${uc.light}55` }]} testID={`create-mission-${uid}`}>
-                        <Ionicons name="add" size={12} color={uc.light} />
-                        <Text style={[styles.smallBtnText, { color: uc.light }]}>CREAR MISIÓN</Text>
-                      </Pressable>
-                    )}
                     <Pressable onPress={() => { setMissionList(uid); setOpenMenu(null); }} style={[styles.smallBtn, { borderColor: `${uc.light}55` }]} testID={`view-missions-${uid}`}>
                       <Ionicons name="list" size={12} color={uc.light} />
                       <Text style={[styles.smallBtnText, { color: uc.light }]}>MISIONES ({state.missions[uid].length})</Text>
                     </Pressable>
-                    {!isMe && (
-                      <Pressable onPress={() => { setAchCreate(uid); setOpenMenu(null); }} style={[styles.smallBtn, { borderColor: `${uc.light}55` }]} testID={`create-achievement-${uid}`}>
-                        <Ionicons name="add" size={12} color={uc.light} />
-                        <Text style={[styles.smallBtnText, { color: uc.light }]}>CREAR LOGRO</Text>
-                      </Pressable>
-                    )}
                     <Pressable onPress={() => { setAchList(uid); setOpenMenu(null); }} style={[styles.smallBtn, { borderColor: `${uc.light}55` }]} testID={`view-achievements-${uid}`}>
                       <Ionicons name="trophy" size={12} color={uc.light} />
                       <Text style={[styles.smallBtnText, { color: uc.light }]}>LOGROS ({(state.achievements?.[uid] || []).length})</Text>
@@ -419,6 +407,7 @@ export default function Dashboard() {
           isOwner={me === missionList}
           onComplete={(m) => completeMission(missionList, m.id)}
           onDelete={(m) => deleteMission(missionList, m.id)}
+          onCreatePress={me !== missionList ? () => { const t = missionList; setMissionList(null); setMissionCreate(t); } : undefined}
         />
       )}
 
@@ -442,6 +431,7 @@ export default function Dashboard() {
           glow={getUserColors(achList).glow}
           ownerName={achList === "laury" ? "Laury" : "Danny"}
           onDelete={(a) => deleteAchievement(achList, a.id)}
+          onCreatePress={me !== achList ? () => { const t = achList; setAchList(null); setAchCreate(t); } : undefined}
         />
       )}
     </SafeAreaView>

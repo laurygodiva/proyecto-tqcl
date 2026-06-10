@@ -103,49 +103,56 @@ interface ListProps {
   isOwner: boolean;
   onComplete: (m: Mission) => void;
   onDelete: (m: Mission) => void;
+  onCreatePress?: () => void;
 }
 
-export function MissionList({ visible, onClose, missions, light, glow, ownerName, isOwner, onComplete, onDelete }: ListProps) {
+export function MissionList({ visible, onClose, missions, light, glow, ownerName, isOwner, onComplete, onDelete, onCreatePress }: ListProps) {
+  const active = missions.filter((m) => !m.completed);
+  const completed = missions.filter((m) => m.completed);
+  const renderMission = (m: Mission) => {
+    const rc = rarityColors[m.rarity];
+    return (
+      <View key={m.id} style={[s.missionCard, { borderColor: m.completed ? `${rc.border}40` : rc.border, opacity: m.completed ? 0.55 : 1 }]} testID={`mission-${m.id}`}>
+        <View style={{ flex: 1 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Text style={[s.rarityBadge, { color: rc.border, backgroundColor: `${rc.border}25`, borderColor: `${rc.border}66` }]}>{rc.label}</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+              <Ionicons name="star" size={11} color={rc.border} />
+              <Text style={{ color: rc.border, fontSize: 11, fontWeight: "800" }}>+{m.reward}</Text>
+            </View>
+            {m.coinReward != null && (
+              <Text style={{ color: colors.glowPink, fontSize: 11, fontWeight: "800" }}>+{m.coinReward}🪙</Text>
+            )}
+          </View>
+          <Text style={s.missionName}>{m.name}</Text>
+          <Text style={s.missionDesc}>{m.description}</Text>
+        </View>
+        <View style={{ gap: 6 }}>
+          {!m.completed && (
+            <Pressable onPress={() => onComplete(m)} style={[s.iconBtn, { borderColor: rc.border, backgroundColor: `${rc.border}22` }]} testID={`complete-${m.id}`}>
+              <Ionicons name="checkmark" size={16} color={rc.border} />
+            </Pressable>
+          )}
+          <Pressable onPress={() => onDelete(m)} style={[s.iconBtn, { borderColor: "#ff6b6b66" }]} testID={`delete-${m.id}`}>
+            <Ionicons name="trash" size={14} color="#ff6b6b" />
+          </Pressable>
+        </View>
+      </View>
+    );
+  };
   return (
     <NeonSheet visible={visible} onClose={onClose} title={`MISIONES DE ${ownerName.toUpperCase()}`} light={light} glow={glow}>
+      {onCreatePress && (
+        <Pressable onPress={onCreatePress} style={[s.topCreate, { borderColor: light, backgroundColor: `${light}22` }]} testID="open-create-mission">
+          <Ionicons name="add-circle" size={16} color={light} />
+          <Text style={[s.topCreateText, { color: light }]}>CREAR MISIÓN</Text>
+        </Pressable>
+      )}
       {missions.length === 0 && <Text style={s.empty}>Sin misiones aún</Text>}
-      {missions.map((m) => {
-        const rc = rarityColors[m.rarity];
-        return (
-          <View
-            key={m.id}
-            style={[s.missionCard, { borderColor: m.completed ? `${rc.border}40` : rc.border, opacity: m.completed ? 0.5 : 1 }]}
-            testID={`mission-${m.id}`}
-          >
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <Text style={[s.rarityBadge, { color: rc.border, backgroundColor: `${rc.border}25`, borderColor: `${rc.border}66` }]}>{rc.label}</Text>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                  <Ionicons name="star" size={11} color={rc.border} />
-                  <Text style={{ color: rc.border, fontSize: 11, fontWeight: "800" }}>+{m.reward}</Text>
-                </View>
-                {m.coinReward != null && (
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                    <Text style={{ color: colors.glowPink, fontSize: 11, fontWeight: "800" }}>+{m.coinReward}🪙</Text>
-                  </View>
-                )}
-              </View>
-              <Text style={s.missionName}>{m.name}</Text>
-              <Text style={s.missionDesc}>{m.description}</Text>
-            </View>
-            <View style={{ gap: 6 }}>
-              {!m.completed && (
-                <Pressable onPress={() => onComplete(m)} style={[s.iconBtn, { borderColor: rc.border, backgroundColor: `${rc.border}22` }]} testID={`complete-${m.id}`}>
-                  <Ionicons name="checkmark" size={16} color={rc.border} />
-                </Pressable>
-              )}
-              <Pressable onPress={() => onDelete(m)} style={[s.iconBtn, { borderColor: "#ff6b6b66" }]} testID={`delete-${m.id}`}>
-                <Ionicons name="trash" size={14} color="#ff6b6b" />
-              </Pressable>
-            </View>
-          </View>
-        );
-      })}
+      {active.length > 0 && <Text style={[s.sectionLbl, { color: light }]}>ACTIVAS ({active.length})</Text>}
+      {active.map(renderMission)}
+      {completed.length > 0 && <Text style={[s.sectionLbl, { color: colors.textDim }]}>COMPLETADAS ({completed.length})</Text>}
+      {completed.map(renderMission)}
     </NeonSheet>
   );
 }
@@ -182,4 +189,7 @@ const s = StyleSheet.create({
   missionName: { color: colors.text, fontSize: 13, fontWeight: "800", marginTop: 4 },
   missionDesc: { color: colors.textDim, fontSize: 11, marginTop: 2 },
   iconBtn: { width: 28, height: 28, borderRadius: 8, borderWidth: 1.5, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface },
+  topCreate: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 12, borderRadius: 10, borderWidth: 1.5, marginBottom: 10 },
+  topCreateText: { fontSize: 12, fontWeight: "900", letterSpacing: 2 },
+  sectionLbl: { fontSize: 10, fontWeight: "900", letterSpacing: 1.5, marginTop: 6, marginBottom: 6 },
 });
