@@ -88,6 +88,10 @@ DEFAULT_STATE: Dict[str, Any] = {
     "locations": {"laury": "mi_casa", "danny": "mi_casa"},
     "missions": {"laury": [], "danny": []},
     "coins": {"laury": 0, "danny": 0},
+    "vouchers": {
+        "laury": {"tokens": 0, "crafted": []},
+        "danny": {"tokens": 0, "crafted": []},
+    },
     "achievements": {"laury": [], "danny": []},
     "inventory": {"laury": [], "danny": []},
     "calendar": {},
@@ -191,6 +195,17 @@ class CalendarEntryRequest(BaseModel):
     period: Optional[bool] = None  # solo laury
 
 
+class VoucherCraft(BaseModel):
+    userId: Literal["laury", "danny"]
+    name: str
+    description: str
+
+
+class VoucherAction(BaseModel):
+    userId: Literal["laury", "danny"]
+    voucherId: str
+
+
 # ============ Helpers ============
 async def ensure_state():
     doc = await db.state.find_one({"_id": COUPLE_DOC_ID})
@@ -250,12 +265,22 @@ async def patch_state(patch: StatePatch):
 @api_router.post("/state/xp")
 async def add_xp(req: AddXPRequest):
     doc = await ensure_state()
-    total = int(doc.get("userData", {}).get("totalXP", 0)) + int(req.amount)
+    old_total = int(doc.get("userData", {}).get("totalXP", 0))
+    old_level = old_total // 100 + 1
+    total = old_total + int(req.amount)
     new_user_data = compute_level(total)
-    await db.state.update_one(
-        {"_id": COUPLE_DOC_ID},
-        {"$set": {"userData": new_user_data, "lastUpdated": datetime.now(timezone.utc).isoformat()}},
-    )
+    new_level = new_user_data["level"]
+    update: Dict[str, Any] = {"userData": new_user_data, "lastUpdated": datetime.now(timezone.utc).isoformat()}
+    if new_level > old_level:
+        gained = new_level - old_level
+        vouchers = doc.get("vouchers", {"laury": {"tokens": 0, "crafted": []}, "danny": {"tokens": 0, "crafted": []}})
+        for uid in ("laury", "danny"):
+            entry = vouchers.get(uid) or {"tokens": 0, "crafted": []}
+            entry["tokens"] = int(entry.get("tokens", 0)) + gained
+            entry.setdefault("crafted", [])
+            vouchers[uid] = entry
+        update["vouchers"] = vouchers
+    await db.state.update_one({"_id": COUPLE_DOC_ID}, {"$set": update})
     return new_user_data
 
 @api_router.post("/state/missions/create")
@@ -297,16 +322,28 @@ async def complete_mission(req: MissionAction):
             break
     total = int(doc.get("userData", {}).get("totalXP", 0)) + reward
     new_user_data = compute_level(total)
+    old_level = int(doc.get("userData", {}).get("totalXP", 0)) // 100 + 1
+    new_level = new_user_data["level"]
     coins = doc.get("coins", {"laury": 0, "danny": 0})
     coins[req.targetUser] = int(coins.get(req.targetUser, 0)) + coin_reward
+    update_fields: Dict[str, Any] = {
+        "missions": missions,
+        "userData": new_user_data,
+        "coins": coins,
+        "lastUpdated": datetime.now(timezone.utc).isoformat(),
+    }
+    if new_level > old_level:
+        gained = new_level - old_level
+        vouchers = doc.get("vouchers", {"laury": {"tokens": 0, "crafted": []}, "danny": {"tokens": 0, "crafted": []}})
+        for uid in ("laury", "danny"):
+            entry = vouchers.get(uid) or {"tokens": 0, "crafted": []}
+            entry["tokens"] = int(entry.get("tokens", 0)) + gained
+            entry.setdefault("crafted", [])
+            vouchers[uid] = entry
+        update_fields["vouchers"] = vouchers
     await db.state.update_one(
         {"_id": COUPLE_DOC_ID},
-        {"$set": {
-            "missions": missions,
-            "userData": new_user_data,
-            "coins": coins,
-            "lastUpdated": datetime.now(timezone.utc).isoformat(),
-        }},
+        {"$set": update_fields},
     )
     return {"missions": missions, "userData": new_user_data, "coins": coins, "rewardGranted": reward, "coinsGranted": coin_reward}
 
@@ -481,6 +518,72 @@ async def delete_calendar_note(payload: Dict[str, Any]):
             {"$set": {"calendar": cal, "lastUpdated": datetime.now(timezone.utc).isoformat()}},
         )
     return {"calendar": cal}
+
+
+def _ensure_vouchers(doc: Dict[str, Any]) -> Dict[str, Any]:
+    v = doc.get("vouchers")
+    if not isinstance(v, dict):
+        v = {}
+    for uid in ("laury", "danny"):
+        if not isinstance(v.get(uid), dict):
+            v[uid] = {"tokens": 0, "crafted": []}
+        v[uid].setdefault("tokens", 0)
+        v[uid].setdefault("crafted", [])
+    return v
+
+
+@api_router.post("/state/vouchers/craft")
+async def craft_voucher(req: VoucherCraft):
+    doc = await ensure_state()
+    vouchers = _ensure_vouchers(doc)
+    if int(vouchers[req.userId]["tokens"]) < 1:
+        raise HTTPException(400, "No tienes deseos disponibles")
+    vouchers[req.userId]["tokens"] -= 1
+    new_v = {
+        "id": f"v_{uuid.uuid4().hex[:10]}",
+        "name": req.name,
+        "description": req.description,
+        "createdAt": datetime.now(timezone.utc).isoformat(),
+        "redeemed": False,
+    }
+    vouchers[req.userId]["crafted"].append(new_v)
+    await db.state.update_one(
+        {"_id": COUPLE_DOC_ID},
+        {"$set": {"vouchers": vouchers, "lastUpdated": datetime.now(timezone.utc).isoformat()}},
+    )
+    return {"vouchers": vouchers, "created": new_v}
+
+
+@api_router.post("/state/vouchers/redeem")
+async def redeem_voucher(req: VoucherAction):
+    doc = await ensure_state()
+    vouchers = _ensure_vouchers(doc)
+    found = False
+    for v in vouchers[req.userId]["crafted"]:
+        if v.get("id") == req.voucherId and not v.get("redeemed"):
+            v["redeemed"] = True
+            v["redeemedAt"] = datetime.now(timezone.utc).isoformat()
+            found = True
+            break
+    if not found:
+        raise HTTPException(404, "Deseo no encontrado")
+    await db.state.update_one(
+        {"_id": COUPLE_DOC_ID},
+        {"$set": {"vouchers": vouchers, "lastUpdated": datetime.now(timezone.utc).isoformat()}},
+    )
+    return {"vouchers": vouchers}
+
+
+@api_router.post("/state/vouchers/delete")
+async def delete_voucher(req: VoucherAction):
+    doc = await ensure_state()
+    vouchers = _ensure_vouchers(doc)
+    vouchers[req.userId]["crafted"] = [v for v in vouchers[req.userId]["crafted"] if v.get("id") != req.voucherId]
+    await db.state.update_one(
+        {"_id": COUPLE_DOC_ID},
+        {"$set": {"vouchers": vouchers, "lastUpdated": datetime.now(timezone.utc).isoformat()}},
+    )
+    return {"vouchers": vouchers}
 
 @api_router.post("/state/reset")
 async def reset_state():

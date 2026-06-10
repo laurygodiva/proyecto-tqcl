@@ -101,6 +101,20 @@ export interface CalendarEntry {
   period?: boolean;
 }
 
+export interface Voucher {
+  id: string;
+  name: string;
+  description: string;
+  createdAt: string;
+  redeemed: boolean;
+  redeemedAt?: string;
+}
+
+export interface VoucherEntry {
+  tokens: number;
+  crafted: Voucher[];
+}
+
 export interface CoupleState {
   userData: UserData;
   bubbles: Record<UserId, BubbleState>;
@@ -108,6 +122,7 @@ export interface CoupleState {
   locations: Record<UserId, LocationType>;
   missions: Record<UserId, Mission[]>;
   coins: Record<UserId, number>;
+  vouchers: Record<UserId, VoucherEntry>;
   achievements: Record<UserId, Achievement[]>;
   inventory: Record<UserId, InventoryItem[]>;
   calendar: Record<string, CalendarEntry>;
@@ -184,6 +199,21 @@ export const api = {
     request<{ calendar: Record<string, CalendarEntry> }>("/state/calendar/delete_note", {
       method: "POST",
       body: JSON.stringify({ date, noteId }),
+    }),
+  craftVoucher: (userId: UserId, name: string, description: string) =>
+    request<{ vouchers: Record<UserId, VoucherEntry>; created: Voucher }>("/state/vouchers/craft", {
+      method: "POST",
+      body: JSON.stringify({ userId, name, description }),
+    }),
+  redeemVoucher: (userId: UserId, voucherId: string) =>
+    request<{ vouchers: Record<UserId, VoucherEntry> }>("/state/vouchers/redeem", {
+      method: "POST",
+      body: JSON.stringify({ userId, voucherId }),
+    }),
+  deleteVoucher: (userId: UserId, voucherId: string) =>
+    request<{ vouchers: Record<UserId, VoucherEntry> }>("/state/vouchers/delete", {
+      method: "POST",
+      body: JSON.stringify({ userId, voucherId }),
     }),
 };
 

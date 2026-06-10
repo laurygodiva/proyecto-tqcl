@@ -15,6 +15,7 @@ import CoinIcon from "../src/components/CoinIcon";
 import { MissionCreator, MissionList } from "../src/components/Missions";
 import { AchievementCreator, AchievementList } from "../src/components/Achievements";
 import { ShopSheet, InventorySheet, MinigamesSheet, RouletteSheet, CalendarSheet } from "../src/components/CoreSheets";
+import { VouchersSheet } from "../src/components/Vouchers";
 
 const { width: W } = Dimensions.get("window");
 const CARD_W = (W - 56) / 2;
@@ -64,7 +65,7 @@ export default function Dashboard() {
   const [achCreate, setAchCreate] = useState<UserId | null>(null);
   const [achList, setAchList] = useState<UserId | null>(null);
   const [openMenu, setOpenMenu] = useState<UserId | null>(null);
-  const [actionSheet, setActionSheet] = useState<"shop" | "minigames" | "roulette" | "calendar" | "inventory" | null>(null);
+  const [actionSheet, setActionSheet] = useState<"shop" | "minigames" | "roulette" | "calendar" | "inventory" | "vouchers" | null>(null);
   const [glowTick, setGlowTick] = useState(0);
   const [avatarOptions, setAvatarOptions] = useState<Record<UserId, { label: string; url: string }[]>>({ laury: [], danny: [] });
   const [plusOnes, setPlusOnes] = useState<number[]>([]);
@@ -214,6 +215,10 @@ export default function Dashboard() {
                 <CoinIcon size={16} />
                 <Text style={[styles.coinText, { color: myColors.light }]}>{coins[me] ?? 0}</Text>
               </View>
+              <Pressable onPress={() => setActionSheet("vouchers")} style={[styles.coinPillFlat, { marginTop: 4 }]} testID={`my-vouchers`}>
+                <Ionicons name="star" size={14} color={myColors.light} />
+                <Text style={[styles.coinText, { color: myColors.light }]}>{((state.vouchers?.[me]?.tokens || 0) + (state.vouchers?.[me]?.crafted?.filter((v) => !v.redeemed).length || 0))}</Text>
+              </Pressable>
             </View>
             <View style={styles.barCol}>
               <View style={{ flexDirection: "row", gap: 6, alignItems: "stretch" }}>
@@ -507,6 +512,16 @@ export default function Dashboard() {
         glow={myColors.glow}
         onUpdate={(cal) => optimistic((s) => ({ ...s, calendar: cal }))}
       />
+
+      <VouchersSheet
+        visible={actionSheet === "vouchers"}
+        onClose={() => setActionSheet(null)}
+        me={me}
+        entry={state.vouchers?.[me] || { tokens: 0, crafted: [] }}
+        light={myColors.light}
+        glow={myColors.glow}
+        onUpdate={(v) => optimistic((s) => ({ ...s, vouchers: v }))}
+      />
     </SafeAreaView>
   );
 }
@@ -554,5 +569,5 @@ const styles = StyleSheet.create({
   avatarPreview: { width: 110, height: 110, borderRadius: 14, backgroundColor: colors.bg },
   actionsRow: { flexDirection: "row", gap: 8, paddingHorizontal: 12, marginTop: 16, justifyContent: "space-between" },
   actionBtn: { flex: 1, paddingVertical: 12, paddingHorizontal: 4, borderRadius: 12, borderWidth: 1.5, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center", gap: 4, shadowOpacity: 0.4, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } },
-  actionLabel: { fontSize: 9, fontWeight: "900", letterSpacing: 0.8 },
+  actionLabel: { fontSize: 7.5, fontWeight: "900", letterSpacing: 0.6 },
 });
