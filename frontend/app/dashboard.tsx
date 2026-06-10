@@ -12,10 +12,12 @@ import TimeCounter from "../src/components/TimeCounter";
 import StatusBubble from "../src/components/StatusBubble";
 import NeonSheet from "../src/components/NeonSheet";
 import CoinIcon from "../src/components/CoinIcon";
+import TicketIcon from "../src/components/TicketIcon";
 import { MissionCreator, MissionList } from "../src/components/Missions";
 import { AchievementCreator, AchievementList } from "../src/components/Achievements";
 import { ShopSheet, InventorySheet, MinigamesSheet, RouletteSheet, CalendarSheet } from "../src/components/CoreSheets";
 import { VouchersSheet } from "../src/components/Vouchers";
+import { SettingsSheet, HistorySheet, ProfileSheet } from "../src/components/SettingsSheets";
 
 const { width: W } = Dimensions.get("window");
 const CARD_W = (W - 56) / 2;
@@ -66,6 +68,9 @@ export default function Dashboard() {
   const [achList, setAchList] = useState<UserId | null>(null);
   const [openMenu, setOpenMenu] = useState<UserId | null>(null);
   const [actionSheet, setActionSheet] = useState<"shop" | "minigames" | "roulette" | "calendar" | "inventory" | "vouchers" | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [glowTick, setGlowTick] = useState(0);
   const [avatarOptions, setAvatarOptions] = useState<Record<UserId, { label: string; url: string }[]>>({ laury: [], danny: [] });
   const [plusOnes, setPlusOnes] = useState<number[]>([]);
@@ -108,14 +113,14 @@ export default function Dashboard() {
 
   const optimistic = (updater: (s: any) => any) => setState((s) => (s ? updater(s) : s));
 
-  const addXP = async (amount: number) => {
+  const addXP = async (amount: number, reason?: string, icon?: string) => {
     setGlowTick((g) => g + 1);
     setActMenu(false);
     optimistic((s) => {
       const total = s.userData.totalXP + amount;
       return { ...s, userData: { level: Math.floor(total / 100) + 1, currentXP: total % 100, totalXP: total } };
     });
-    try { await api.addXP(amount); } catch {}
+    try { await api.addXP(amount, me, reason, icon); } catch {}
   };
 
   const applyStatus = async () => {
@@ -146,7 +151,7 @@ export default function Dashboard() {
     const id = Date.now();
     setPlusOnes((p) => [...p, id]);
     setTimeout(() => setPlusOnes((p) => p.filter((x) => x !== id)), 1000);
-    await addXP(1);
+    await addXP(1, "Estamos Juntos", "♥");
   };
 
   const logout = async () => { await authStore.clear(); router.replace("/"); };
@@ -162,7 +167,7 @@ export default function Dashboard() {
 
   const completeMission = async (uid: UserId, mid: string) => {
     try {
-      const res = await api.completeMission(uid, mid);
+      const res = await api.completeMission(uid, mid, me);
       optimistic((s) => ({ ...s, missions: res.missions, userData: res.userData, coins: res.coins }));
       setGlowTick((g) => g + 1);
     } catch {}
@@ -205,32 +210,34 @@ export default function Dashboard() {
         <View style={styles.topBox}>
           <View style={styles.topRow}>
             <View style={{ alignItems: "center" }}>
-              <View style={[styles.meAvatar, { borderColor: myColors.light, shadowColor: myColors.glow }]}>
-                <Image source={{ uri: auth.user.avatar }} style={{ width: "100%", height: "100%" }} />
-                <Pressable onPress={logout} style={styles.logoutBtn} testID="logout-button">
-                  <Ionicons name="log-out-outline" size={12} color={colors.text} />
+              <View style={styles.meAvatarWrap}>
+                <View style={[styles.meAvatar, { borderColor: myColors.light, shadowColor: myColors.glow }]}>
+                  <Image source={{ uri: auth.user.avatar }} style={{ width: "100%", height: "100%" }} />
+                </View>
+                <Pressable onPress={() => setSettingsOpen(true)} style={[styles.settingsBtn, { borderColor: myColors.light, shadowColor: myColors.glow }]} testID="settings-button">
+                  <Ionicons name="settings-sharp" size={14} color={myColors.light} />
                 </Pressable>
               </View>
-              <View style={[styles.coinPillFlat, { marginTop: 8, alignSelf: "flex-start" }]} testID={`my-coins`}>
-                <CoinIcon size={16} />
-                <Text style={[styles.coinText, { color: myColors.light }]}>{coins[me] ?? 0}</Text>
+              <View style={[styles.coinPillFlat, { marginTop: 12, alignSelf: "flex-start" }]} testID={`my-coins`}>
+                <CoinIcon size={18} />
+                <Text style={[styles.coinText, { color: colors.text }]}>{coins[me] ?? 0}</Text>
               </View>
               <Pressable onPress={() => setActionSheet("vouchers")} style={[styles.coinPillFlat, { marginTop: 4, alignSelf: "flex-start" }]} testID={`my-vouchers`}>
-                <Ionicons name="ticket" size={14} color={myColors.light} />
-                <Text style={[styles.coinText, { color: myColors.light }]}>{((state.vouchers?.[me]?.tokens || 0) + (state.vouchers?.[me]?.crafted?.filter((v) => !v.redeemed).length || 0))}</Text>
+                <TicketIcon size={18} />
+                <Text style={[styles.coinText, { color: colors.text }]}>{((state.vouchers?.[me]?.tokens || 0) + (state.vouchers?.[me]?.crafted?.filter((v) => !v.redeemed).length || 0))}</Text>
               </Pressable>
             </View>
             <View style={styles.barCol}>
               <View style={{ flexDirection: "row", gap: 6, alignItems: "stretch" }}>
                 <View style={{ flex: 1 }}>
                   <ProgressBar level={state.userData.level} currentXP={state.userData.currentXP} maxXP={100} userColor={myColors} triggerGlow={glowTick > 0} />
+                  <View style={[styles.timeBox, { borderColor: `${myColors.light}55`, shadowColor: myColors.glow }]}>
+                    <TimeCounter startDate={startDate} />
+                  </View>
                 </View>
                 <Pressable onPress={() => setActMenu(true)} style={[styles.heartBtn, { borderColor: `${myColors.light}66`, shadowColor: myColors.glow }]} testID="add-xp-button">
                   <Ionicons name="heart" size={18} color={myColors.light} />
                 </Pressable>
-              </View>
-              <View style={[styles.timeBox, { borderColor: `${myColors.light}55`, shadowColor: myColors.glow }]}>
-                <TimeCounter startDate={startDate} />
               </View>
             </View>
           </View>
@@ -275,8 +282,15 @@ export default function Dashboard() {
             const isMe = me === uid;
             return (
               <View key={uid} style={{ alignItems: "center" }}>
-                <Pressable onPress={() => setOpenMenu(openMenu === uid ? null : uid)} testID={`name-${uid}`}>
-                  <Text style={[styles.nameLabel, { color: uc.light, textShadowColor: uc.glow }]}>{uid === "laury" ? `▾ Laury` : `Danny ▾`}</Text>
+                <Pressable
+                  onPress={() => setOpenMenu(openMenu === uid ? null : uid)}
+                  style={[styles.nameBtn, { borderColor: `${uc.light}66`, shadowColor: uc.glow }]}
+                  testID={`name-${uid}`}
+                >
+                  <Text style={[styles.nameLabel, { color: uc.light, textShadowColor: uc.glow }]}>
+                    {uid === "laury" ? "Laury" : "Danny"}
+                  </Text>
+                  <Ionicons name={openMenu === uid ? "chevron-up" : "chevron-down"} size={14} color={uc.light} />
                 </Pressable>
                 <Pressable
                   onPress={() => isMe && setAvatarSheet(uid)}
@@ -335,7 +349,7 @@ export default function Dashboard() {
         {ACTIVITIES.map((a, idx) => {
           const altColors = idx % 2 === 0 ? userColors.laury : userColors.danny;
           return (
-            <Pressable key={a.id} onPress={() => addXP(a.xp)} style={[styles.actRow, { borderLeftColor: altColors.light, shadowColor: altColors.glow }]} testID={`activity-${a.id}`}>
+            <Pressable key={a.id} onPress={() => addXP(a.xp, a.name, a.icon)} style={[styles.actRow, { borderLeftColor: altColors.light, shadowColor: altColors.glow }]} testID={`activity-${a.id}`}>
               <Text style={{ fontSize: 18 }}>{a.icon}</Text>
               <Text style={[styles.actName, { color: altColors.light }]}>{a.name}</Text>
               <Text style={[styles.actXp, { color: altColors.light }]}>+{a.xp}</Text>
@@ -522,6 +536,46 @@ export default function Dashboard() {
         glow={myColors.glow}
         onUpdate={(v) => optimistic((s) => ({ ...s, vouchers: v }))}
       />
+
+      <SettingsSheet
+        visible={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        me={me}
+        light={myColors.light}
+        glow={myColors.glow}
+        onLogout={logout}
+        onOpenHistory={() => setHistoryOpen(true)}
+        onOpenProfile={() => setProfileOpen(true)}
+      />
+
+      <HistorySheet
+        visible={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        events={state.events || []}
+        profiles={(state.profiles as any) || {}}
+        light={myColors.light}
+        glow={myColors.glow}
+      />
+
+      <ProfileSheet
+        visible={profileOpen}
+        onClose={() => setProfileOpen(false)}
+        me={me}
+        profile={auth.user}
+        avatarOptions={avatarOptions[me] || []}
+        light={myColors.light}
+        glow={myColors.glow}
+        onUpdated={async (data) => {
+          if (data.profile) {
+            const newAuth = { ...auth, user: data.profile };
+            setAuth(newAuth);
+            await authStore.save(newAuth);
+          }
+          if (data.avatarOptions) {
+            setAvatarOptions((prev) => ({ ...prev, [me]: data.avatarOptions! }));
+          }
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -530,23 +584,38 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   topBox: { paddingHorizontal: 12, paddingTop: 8 },
   topRow: { flexDirection: "row", gap: 10, alignItems: "flex-start" },
-  meAvatar: { width: 52, height: 52, borderRadius: 26, overflow: "hidden", borderWidth: 2, shadowOpacity: 0.6, shadowRadius: 8 },
-  logoutBtn: { position: "absolute", bottom: -4, right: -4, width: 22, height: 22, borderRadius: 11, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" },
+  meAvatarWrap: { position: "relative" },
+  meAvatar: { width: 56, height: 56, borderRadius: 28, overflow: "hidden", borderWidth: 2, shadowOpacity: 0.6, shadowRadius: 8 },
+  settingsBtn: { position: "absolute", bottom: -8, right: -8, width: 26, height: 26, borderRadius: 13, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center", borderWidth: 1.5, shadowOpacity: 0.7, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } },
   barCol: { flex: 1 },
   heartBtn: { width: 38, borderRadius: 8, borderWidth: 1.5, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center", shadowOpacity: 0.4, shadowRadius: 8 },
   cardsRow: { flexDirection: "row", justifyContent: "space-around", paddingHorizontal: 12, marginTop: 16, gap: 16 },
-  nameLabel: { fontSize: 16, fontWeight: "900", letterSpacing: 1, marginBottom: 8, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 10 },
+  nameLabel: { fontSize: 14, fontWeight: "900", letterSpacing: 1, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 10 },
+  nameBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    backgroundColor: colors.surface,
+    marginBottom: 8,
+    shadowOpacity: 0.55,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 0 },
+  },
   coinPill: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1.5, backgroundColor: colors.surface, marginTop: 6 },
   coinPillFlat: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 2, paddingVertical: 2 },
   coinText: { fontSize: 12, fontWeight: "900", letterSpacing: 0.5 },
   timeBox: {
-    marginTop: 10,
-    alignSelf: "flex-start",
+    marginTop: 8,
+    alignSelf: "center",
     backgroundColor: colors.surface,
     borderWidth: 1.5,
     borderRadius: 10,
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 4,
     shadowOpacity: 0.4,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 0 },
@@ -580,6 +649,6 @@ const styles = StyleSheet.create({
   avatarPreviewWrap: { alignItems: "center", marginBottom: 6 },
   avatarPreview: { width: 110, height: 110, borderRadius: 14, backgroundColor: colors.bg },
   actionsRow: { flexDirection: "row", gap: 8, paddingHorizontal: 12, marginTop: 16, justifyContent: "space-between" },
-  actionBtn: { flex: 1, paddingVertical: 12, paddingHorizontal: 4, borderRadius: 12, borderWidth: 1.5, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center", gap: 4, shadowOpacity: 0.4, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } },
-  actionLabel: { fontSize: 7.5, fontWeight: "900", letterSpacing: 0.6 },
+  actionBtn: { flex: 1, paddingVertical: 7, paddingHorizontal: 4, borderRadius: 10, borderWidth: 1.5, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center", gap: 2, shadowOpacity: 0.4, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } },
+  actionLabel: { fontSize: 8, fontWeight: "900", letterSpacing: 0.6 },
 });

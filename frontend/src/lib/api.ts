@@ -115,6 +115,17 @@ export interface VoucherEntry {
   crafted: Voucher[];
 }
 
+export interface AppEvent {
+  id: string;
+  at: string;
+  user: UserId | null;
+  type: string;
+  title: string;
+  description: string;
+  icon: string;
+  color?: string | null;
+}
+
 export interface CoupleState {
   userData: UserData;
   bubbles: Record<UserId, BubbleState>;
@@ -126,6 +137,9 @@ export interface CoupleState {
   achievements: Record<UserId, Achievement[]>;
   inventory: Record<UserId, InventoryItem[]>;
   calendar: Record<string, CalendarEntry>;
+  profiles?: Record<UserId, PublicUser & { password?: string }>;
+  avatarOptions?: Record<UserId, { label: string; url: string }[]>;
+  events?: AppEvent[];
   relationshipStartDate: string;
   lastUpdated: string;
 }
@@ -141,8 +155,8 @@ export const api = {
   getState: () => request<CoupleState>("/state"),
   patchState: (patch: Partial<CoupleState>) =>
     request<CoupleState>("/state", { method: "PATCH", body: JSON.stringify(patch) }),
-  addXP: (amount: number) =>
-    request<UserData>("/state/xp", { method: "POST", body: JSON.stringify({ amount }) }),
+  addXP: (amount: number, actor?: UserId, reason?: string, icon?: string) =>
+    request<UserData>("/state/xp", { method: "POST", body: JSON.stringify({ amount, actor, reason, icon }) }),
   createMission: (data: {
     targetUser: UserId;
     createdBy: UserId;
@@ -151,10 +165,10 @@ export const api = {
     rarity: MissionRarity;
     reward: number;
   }) => request<Mission>("/state/missions/create", { method: "POST", body: JSON.stringify(data) }),
-  completeMission: (targetUser: UserId, missionId: string) =>
+  completeMission: (targetUser: UserId, missionId: string, actor?: UserId) =>
     request<{ missions: Record<UserId, Mission[]>; userData: UserData; coins: Record<UserId, number>; rewardGranted: number; coinsGranted: number }>(
       "/state/missions/complete",
-      { method: "POST", body: JSON.stringify({ targetUser, missionId }) },
+      { method: "POST", body: JSON.stringify({ targetUser, missionId, actor }) },
     ),
   deleteMission: (targetUser: UserId, missionId: string) =>
     request<{ missions: Record<UserId, Mission[]> }>("/state/missions/delete", {
@@ -215,6 +229,27 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ userId, voucherId }),
     }),
+  updateProfile: (data: { userId: UserId; name?: string; age?: string; birthday?: string; zodiac?: string; skills?: string; avatar?: string }) =>
+    request<{ profiles: Record<UserId, PublicUser>; user: PublicUser }>("/profile/update", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  changePassword: (userId: UserId, currentPassword: string, newPassword: string) =>
+    request<{ ok: boolean }>("/profile/password", {
+      method: "POST",
+      body: JSON.stringify({ userId, currentPassword, newPassword }),
+    }),
+  addAvatarOption: (userId: UserId, label: string, url: string) =>
+    request<{ avatarOptions: Record<UserId, { label: string; url: string }[]> }>("/profile/avatar/add", {
+      method: "POST",
+      body: JSON.stringify({ userId, label, url }),
+    }),
+  deleteAvatarOption: (userId: UserId, url: string) =>
+    request<{ avatarOptions: Record<UserId, { label: string; url: string }[]> }>("/profile/avatar/delete", {
+      method: "POST",
+      body: JSON.stringify({ userId, url }),
+    }),
+  clearEvents: () => request<{ ok: boolean }>("/state/events/clear", { method: "POST" }),
 };
 
 // Polling hook for couple state sync
