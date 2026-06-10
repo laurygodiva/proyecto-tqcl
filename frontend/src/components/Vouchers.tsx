@@ -26,7 +26,7 @@ export function VouchersSheet({ visible, onClose, me, entry, light, glow, onUpda
       const r = await api.craftVoucher(me, name.trim(), desc.trim());
       onUpdate(r.vouchers);
       setName(""); setDesc("");
-      setMsg("✨ Deseo creado");
+      setMsg("✨ Cupón creado");
       setTimeout(() => setMsg(null), 1500);
     } catch (e: any) {
       setMsg(e.message || "Error");
@@ -45,30 +45,32 @@ export function VouchersSheet({ visible, onClose, me, entry, light, glow, onUpda
   const redeemed = entry.crafted.filter((v) => v.redeemed);
 
   return (
-    <NeonSheet visible={visible} onClose={onClose} title="MIS DESEOS" light={light} glow={glow}>
+    <NeonSheet visible={visible} onClose={onClose} title="MIS CUPONES" light={light} glow={glow}>
       <View style={[s.header, { borderColor: `${light}55` }]}>
-        <Ionicons name="star" size={22} color={light} />
-        <Text style={[s.headerText, { color: light }]}>Deseos disponibles: {entry.tokens}</Text>
+        <Ionicons name="ticket" size={22} color={light} />
+        <Text style={[s.headerText, { color: light }]}>Cupones disponibles: {entry.tokens}</Text>
       </View>
-      <Text style={s.tip}>Subiendo de nivel obtenéis 1 deseo cada uno ✨</Text>
+      <Text style={s.tip}>Subiendo de nivel obtenéis 1 cupón cada uno ✨</Text>
       {msg && <Text style={[s.msg, { color: light }]}>{msg}</Text>}
 
-      <Text style={s.sectionLbl}>FABRICAR NUEVO DESEO</Text>
+      <Text style={s.sectionLbl}>FABRICAR NUEVO CUPÓN</Text>
+      <Text style={s.fieldLbl}>Nombre del cupón:</Text>
       <TextInput
         value={name}
         onChangeText={setName}
-        placeholder="Nombre del deseo (ej. Cita sorpresa)"
+        placeholder="Ej. Cita sorpresa"
         placeholderTextColor={colors.textDim}
         style={[s.input, { borderColor: `${light}55` }]}
         testID="voucher-name-input"
       />
+      <Text style={s.fieldLbl}>Vale por...</Text>
       <TextInput
         value={desc}
         onChangeText={setDesc}
-        placeholder="¿Qué se canjea por este deseo?"
+        placeholder="Describe el deseo (ej. Una cena romántica)"
         placeholderTextColor={colors.textDim}
         multiline
-        style={[s.input, { borderColor: `${light}55`, minHeight: 70, textAlignVertical: "top", marginTop: 6 }]}
+        style={[s.input, { borderColor: `${light}55`, minHeight: 70, textAlignVertical: "top" }]}
         testID="voucher-desc-input"
       />
       <Pressable
@@ -78,10 +80,10 @@ export function VouchersSheet({ visible, onClose, me, entry, light, glow, onUpda
         testID="voucher-craft-button"
       >
         <Ionicons name="construct" size={14} color={light} />
-        <Text style={[s.craftText, { color: light }]}>FABRICAR (-1 deseo)</Text>
+        <Text style={[s.craftText, { color: light }]}>FABRICAR (-1 CUPÓN)</Text>
       </Pressable>
 
-      {active.length > 0 && <Text style={s.sectionLbl}>DESEOS ACTIVOS ({active.length})</Text>}
+      {active.length > 0 && <Text style={s.sectionLbl}>CUPONES ACTIVOS ({active.length})</Text>}
       {active.map((v) => (
         <View key={v.id} style={[s.vCard, { borderColor: light, shadowColor: glow }]} testID={`voucher-${v.id}`}>
           <View style={{ flex: 1 }}>
@@ -120,6 +122,7 @@ const s = StyleSheet.create({
   tip: { color: colors.textDim, fontSize: 10, textAlign: "center", fontStyle: "italic", marginBottom: 6 },
   msg: { textAlign: "center", fontSize: 12, fontWeight: "700", marginVertical: 6 },
   sectionLbl: { color: colors.text, fontSize: 10, fontWeight: "900", letterSpacing: 1.5, marginTop: 12, marginBottom: 6 },
+  fieldLbl: { color: colors.text, fontSize: 11, fontWeight: "700", marginTop: 8, marginBottom: 4 },
   input: { backgroundColor: colors.bg, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, color: colors.text, fontSize: 13 },
   craftBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, borderRadius: 10, borderWidth: 1.5, marginTop: 8 },
   craftText: { fontSize: 12, fontWeight: "900", letterSpacing: 1.5 },

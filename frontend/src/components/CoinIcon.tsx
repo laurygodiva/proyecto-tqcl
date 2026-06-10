@@ -20,7 +20,7 @@ export default function CoinIcon({ size = 18 }: Props) {
         style={{ width: ring, height: ring, borderRadius: ring / 2, shadowColor: colors.glowPink, shadowOpacity: 0.7, shadowRadius: 6, shadowOffset: { width: 0, height: 0 } }}
       />
       <View style={[styles.inner, { width: inner, height: inner, borderRadius: inner / 2, top: 2, left: 2 }]}>
-        <Text style={[styles.tql, { fontSize: size * 0.42 }]}>♥</Text>
+        <Text style={[styles.tql, { fontSize: size * 0.5 }]}>$</Text>
       </View>
     </View>
   );

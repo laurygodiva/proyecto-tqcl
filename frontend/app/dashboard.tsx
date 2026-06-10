@@ -290,7 +290,7 @@ export default function Dashboard() {
                   <Text style={[styles.nameLabel, { color: uc.light, textShadowColor: uc.glow }]}>
                     {uid === "laury" ? "Laury" : "Danny"}
                   </Text>
-                  <Ionicons name={openMenu === uid ? "chevron-up" : "chevron-down"} size={14} color={uc.light} />
+                  <Ionicons name={openMenu === uid ? "chevron-up" : "chevron-down"} size={12} color={uc.light} />
                 </Pressable>
                 <Pressable
                   onPress={() => isMe && setAvatarSheet(uid)}
@@ -588,19 +588,19 @@ const styles = StyleSheet.create({
   meAvatar: { width: 56, height: 56, borderRadius: 28, overflow: "hidden", borderWidth: 2, shadowOpacity: 0.6, shadowRadius: 8 },
   settingsBtn: { position: "absolute", bottom: -8, right: -8, width: 26, height: 26, borderRadius: 13, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center", borderWidth: 1.5, shadowOpacity: 0.7, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } },
   barCol: { flex: 1 },
-  heartBtn: { width: 38, borderRadius: 8, borderWidth: 1.5, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center", shadowOpacity: 0.4, shadowRadius: 8 },
+  heartBtn: { width: 38, alignSelf: "stretch", borderRadius: 8, borderWidth: 1.5, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center", shadowOpacity: 0.4, shadowRadius: 8 },
   cardsRow: { flexDirection: "row", justifyContent: "space-around", paddingHorizontal: 12, marginTop: 16, gap: 16 },
-  nameLabel: { fontSize: 14, fontWeight: "900", letterSpacing: 1, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 10 },
+  nameLabel: { fontSize: 12, fontWeight: "900", letterSpacing: 1, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 10 },
   nameBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 10,
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
     borderWidth: 1.5,
     backgroundColor: colors.surface,
-    marginBottom: 8,
+    marginBottom: 6,
     shadowOpacity: 0.55,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 0 },
