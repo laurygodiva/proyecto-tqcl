@@ -211,12 +211,12 @@ export default function Dashboard() {
                   <Ionicons name="log-out-outline" size={12} color={colors.text} />
                 </Pressable>
               </View>
-              <View style={[styles.coinPillFlat, { marginTop: 8 }]} testID={`my-coins`}>
+              <View style={[styles.coinPillFlat, { marginTop: 8, alignSelf: "flex-start" }]} testID={`my-coins`}>
                 <CoinIcon size={16} />
                 <Text style={[styles.coinText, { color: myColors.light }]}>{coins[me] ?? 0}</Text>
               </View>
-              <Pressable onPress={() => setActionSheet("vouchers")} style={[styles.coinPillFlat, { marginTop: 4 }]} testID={`my-vouchers`}>
-                <Ionicons name="star" size={14} color={myColors.light} />
+              <Pressable onPress={() => setActionSheet("vouchers")} style={[styles.coinPillFlat, { marginTop: 4, alignSelf: "flex-start" }]} testID={`my-vouchers`}>
+                <Ionicons name="ticket" size={14} color={myColors.light} />
                 <Text style={[styles.coinText, { color: myColors.light }]}>{((state.vouchers?.[me]?.tokens || 0) + (state.vouchers?.[me]?.crafted?.filter((v) => !v.redeemed).length || 0))}</Text>
               </Pressable>
             </View>
@@ -229,7 +229,7 @@ export default function Dashboard() {
                   <Ionicons name="heart" size={18} color={myColors.light} />
                 </Pressable>
               </View>
-              <View style={{ marginTop: 10, alignSelf: "flex-start" }}>
+              <View style={[styles.timeBox, { borderColor: `${myColors.light}55`, shadowColor: myColors.glow }]}>
                 <TimeCounter startDate={startDate} />
               </View>
             </View>
@@ -537,8 +537,20 @@ const styles = StyleSheet.create({
   cardsRow: { flexDirection: "row", justifyContent: "space-around", paddingHorizontal: 12, marginTop: 16, gap: 16 },
   nameLabel: { fontSize: 16, fontWeight: "900", letterSpacing: 1, marginBottom: 8, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 10 },
   coinPill: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1.5, backgroundColor: colors.surface, marginTop: 6 },
-  coinPillFlat: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 4, paddingVertical: 2 },
+  coinPillFlat: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 2, paddingVertical: 2 },
   coinText: { fontSize: 12, fontWeight: "900", letterSpacing: 0.5 },
+  timeBox: {
+    marginTop: 10,
+    alignSelf: "flex-start",
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 0 },
+  },
   charCard: { borderRadius: 18, borderWidth: 2, overflow: "hidden", shadowOpacity: 0.5, shadowRadius: 14, backgroundColor: colors.bg },
   bubbleWrap: { position: "absolute", top: 10, alignSelf: "center", left: 0, right: 0, alignItems: "center" },
   cardBtns: { marginTop: 8, gap: 6, width: CARD_W },

@@ -51,13 +51,13 @@ export default function TimeCounter({ startDate }: Props) {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: "row", gap: 12, alignItems: "center", justifyContent: "center" },
-  unit: { alignItems: "center", minWidth: 34 },
+  row: { flexDirection: "row", gap: 10, alignItems: "center", justifyContent: "center" },
+  unit: { alignItems: "center", minWidth: 30 },
   value: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "900",
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 8,
   },
-  label: { fontSize: 9, color: colors.textDim, fontWeight: "600" },
+  label: { fontSize: 8, color: colors.textDim, fontWeight: "600" },
 });
