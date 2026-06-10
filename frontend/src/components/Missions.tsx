@@ -74,9 +74,12 @@ export function MissionCreator({ visible, onClose, onCreate, targetName, light, 
       </View>
       <View style={[s.reward, { borderColor: `${rarityColors[rarity].border}66` }]}>
         <Text style={[s.lbl, { marginBottom: 0 }]}>RECOMPENSA</Text>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-          <Ionicons name="star" size={14} color={rarityColors[rarity].border} />
-          <Text style={[s.rewardText, { color: rarityColors[rarity].border }]}>+{reward} XP</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <Ionicons name="star" size={14} color={rarityColors[rarity].border} />
+            <Text style={[s.rewardText, { color: rarityColors[rarity].border }]}>+{reward} XP</Text>
+          </View>
+          <Text style={[s.rewardText, { color: colors.glowPink }]}>+{({comun:2,rara:5,epica:10,legendaria:25} as any)[rarity]}🪙</Text>
         </View>
       </View>
       <Pressable
@@ -121,13 +124,18 @@ export function MissionList({ visible, onClose, missions, light, glow, ownerName
                   <Ionicons name="star" size={11} color={rc.border} />
                   <Text style={{ color: rc.border, fontSize: 11, fontWeight: "800" }}>+{m.reward}</Text>
                 </View>
+                {m.coinReward != null && (
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                    <Text style={{ color: colors.glowPink, fontSize: 11, fontWeight: "800" }}>+{m.coinReward}🪙</Text>
+                  </View>
+                )}
               </View>
               <Text style={s.missionName}>{m.name}</Text>
               <Text style={s.missionDesc}>{m.description}</Text>
             </View>
             <View style={{ gap: 6 }}>
-              {isOwner && !m.completed && (
-                <Pressable onPress={() => onComplete(m)} style={[s.iconBtn, { borderColor: rc.border }]} testID={`complete-${m.id}`}>
+              {!m.completed && (
+                <Pressable onPress={() => onComplete(m)} style={[s.iconBtn, { borderColor: rc.border, backgroundColor: `${rc.border}22` }]} testID={`complete-${m.id}`}>
                   <Ionicons name="checkmark" size={16} color={rc.border} />
                 </Pressable>
               )}

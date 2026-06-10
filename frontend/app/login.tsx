@@ -57,9 +57,8 @@ export default function LoginScreen() {
           <View style={[styles.avatarBox, { shadowColor: user.glow, backgroundColor: `${user.dark}30` }]}>
             <Image source={{ uri: user.avatar }} style={styles.avatar} />
           </View>
-          <Text style={styles.welcome}>¡Bienvenid{user.id === "laury" ? "a" : "o"} de nuevo,</Text>
-          <Text style={[styles.name, { color: user.primary, textShadowColor: user.glow }]}>{user.name}!</Text>
-          <Text style={styles.hint}>Ingresa tu contraseña</Text>
+          <Text style={styles.welcome}>Bienvenid{user.id === "laury" ? "a" : "o"} de nuevo</Text>
+          <Text style={[styles.name, { color: user.primary, textShadowColor: user.glow }]}>{user.name}</Text>
 
           <Animated.View style={[styles.inputWrap, { borderColor: error ? "#ff6b6b" : `${user.dark}88` }, shakeStyle]}>
             <Ionicons name="lock-closed" size={18} color={user.primary} />
@@ -89,8 +88,6 @@ export default function LoginScreen() {
               <Text style={styles.submitText}>{loading ? "ENTRANDO..." : "ENTRAR"}</Text>
             </LinearGradient>
           </Pressable>
-
-          <Text style={styles.tip}>Tip: la contraseña inicial es {user.id}123</Text>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

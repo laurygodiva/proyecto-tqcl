@@ -52,19 +52,22 @@ USERS = {
     },
 }
 
+LAURY_PORTRAIT = "https://customer-assets.emergentagent.com/job_ios-sync-app/artifacts/zjnsflg7_laury.png"
+DANNY_PORTRAIT = "https://customer-assets.emergentagent.com/job_ios-sync-app/artifacts/zdg6ii1f_danny.png"
+
 DEFAULT_AVATARS = {
-    "laury": "https://i.postimg.cc/wxNJNTps/2.png",
-    "danny": "https://i.postimg.cc/BbFxQJqb/1.png",
+    "laury": LAURY_PORTRAIT,
+    "danny": DANNY_PORTRAIT,
 }
 
 AVATAR_OPTIONS = {
     "laury": [
+        {"label": "En el PC", "url": LAURY_PORTRAIT},
         {"label": "Durmiendo", "url": "https://i.postimg.cc/6qx8cnXQ/4.png"},
-        {"label": "PC", "url": "https://i.postimg.cc/wxNJNTps/2.png"},
     ],
     "danny": [
+        {"label": "En el PC", "url": DANNY_PORTRAIT},
         {"label": "Durmiendo", "url": "https://i.postimg.cc/VvFkFhgD/3.png"},
-        {"label": "PC", "url": "https://i.postimg.cc/BbFxQJqb/1.png"},
         {"label": "Trabajando", "url": "https://i.postimg.cc/8cT1sHGn/Copia-de-it-takes-two-(1).png"},
     ],
 }
@@ -78,6 +81,7 @@ DEFAULT_STATE: Dict[str, Any] = {
     "avatars": DEFAULT_AVATARS,
     "locations": {"laury": "mi_casa", "danny": "mi_casa"},
     "missions": {"laury": [], "danny": []},
+    "coins": {"laury": 0, "danny": 0},
     "achievements": {"laury": [], "danny": []},
     "relationshipStartDate": "2026-01-09T00:00:00Z",
     "lastUpdated": datetime.now(timezone.utc).isoformat(),
@@ -188,12 +192,14 @@ async def add_xp(req: AddXPRequest):
 async def create_mission(req: MissionCreate):
     doc = await ensure_state()
     missions = doc.get("missions", {"laury": [], "danny": []})
+    coin_map = {"comun": 2, "rara": 5, "epica": 10, "legendaria": 25}
     new_mission = {
         "id": f"m_{uuid.uuid4().hex[:10]}",
         "name": req.name,
         "description": req.description,
         "rarity": req.rarity,
         "reward": req.reward,
+        "coinReward": coin_map.get(req.rarity, 2),
         "createdBy": req.createdBy,
         "createdAt": datetime.now(timezone.utc).isoformat(),
         "completed": False,
@@ -211,23 +217,28 @@ async def complete_mission(req: MissionAction):
     missions = doc.get("missions", {"laury": [], "danny": []})
     target_list = missions.get(req.targetUser, [])
     reward = 0
+    coin_reward = 0
     for m in target_list:
         if m["id"] == req.missionId and not m.get("completed"):
             m["completed"] = True
             m["completedAt"] = datetime.now(timezone.utc).isoformat()
             reward = int(m.get("reward", 0))
+            coin_reward = int(m.get("coinReward", max(1, reward // 5)))
             break
     total = int(doc.get("userData", {}).get("totalXP", 0)) + reward
     new_user_data = compute_level(total)
+    coins = doc.get("coins", {"laury": 0, "danny": 0})
+    coins[req.targetUser] = int(coins.get(req.targetUser, 0)) + coin_reward
     await db.state.update_one(
         {"_id": COUPLE_DOC_ID},
         {"$set": {
             "missions": missions,
             "userData": new_user_data,
+            "coins": coins,
             "lastUpdated": datetime.now(timezone.utc).isoformat(),
         }},
     )
-    return {"missions": missions, "userData": new_user_data, "rewardGranted": reward}
+    return {"missions": missions, "userData": new_user_data, "coins": coins, "rewardGranted": reward, "coinsGranted": coin_reward}
 
 @api_router.post("/state/missions/delete")
 async def delete_mission(req: MissionAction):

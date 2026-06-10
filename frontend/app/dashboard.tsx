@@ -1,21 +1,22 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, Pressable, Image, ScrollView, Dimensions } from "react-native";
+import { View, Text, StyleSheet, Pressable, Image, ScrollView, Dimensions, TextInput } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { api, useCoupleState, UserId, MissionRarity, Mission, LocationType, BubbleState } from "../src/lib/api";
 import { authStore, StoredAuth } from "../src/lib/auth";
-import { colors, LOGO_URL, getUserColors } from "../src/lib/colors";
+import { colors, getUserColors, userColors } from "../src/lib/colors";
 import ProgressBar from "../src/components/ProgressBar";
 import TimeCounter from "../src/components/TimeCounter";
 import StatusBubble from "../src/components/StatusBubble";
 import NeonSheet from "../src/components/NeonSheet";
+import CoinIcon from "../src/components/CoinIcon";
 import { MissionCreator, MissionList } from "../src/components/Missions";
 
 const { width: W } = Dimensions.get("window");
 const CARD_W = (W - 56) / 2;
-const CARD_H = CARD_W * 1.5;
+const CARD_H = CARD_W * 1.4;
 
 const ACTIVITIES = [
   { id: "piropos", name: "Piropos", xp: 15, icon: "💋" },
@@ -29,8 +30,12 @@ const ACTIVITIES = [
   { id: "pasion", name: "Momento de Pasión", xp: 300, icon: "🔥" },
 ];
 
-const EMOJI_OPTIONS = ["💜", "🩵", "❤️", "💕", "💖", "🥰", "😍", "😴", "🎮", "🍕", "🔥", "✨"];
-const STATE_TEXTS = ["Te amo", "Feliz", "Te extraño", "Jugando", "Trabajando", "Durmiendo", "Comiendo", "Aburrido", "Pensando en ti"];
+const EMOJI_OPTIONS = [
+  "💜","🩵","❤️","💕","💖","💘","💝","💗","💓","💞",
+  "🥰","😍","😘","😊","😴","🤗","🤩","😏","😉","🙃",
+  "🎮","🍕","🔥","✨","🌹","🌟","⭐","🎉","🎵","☀️",
+  "🌙","⚡","💎","🎀","🎁","☕","🍫","🌈","🦋","🐺",
+];
 
 const LOC_POS_LAURY: Record<string, number> = { mi_casa: 0, fuera_casa: 25, cita: 50, casa_danny: 100 };
 const LOC_POS_DANNY: Record<string, number> = { mi_casa: 100, fuera_casa: 75, cita: 50, casa_laury: 0 };
@@ -58,6 +63,12 @@ export default function Dashboard() {
   const [avatarOptions, setAvatarOptions] = useState<Record<UserId, { label: string; url: string }[]>>({ laury: [], danny: [] });
   const [plusOnes, setPlusOnes] = useState<number[]>([]);
 
+  // Local edit states for sheets that require "Update" button
+  const [tempEmoji, setTempEmoji] = useState("");
+  const [tempText, setTempText] = useState("");
+  const [tempAvatar, setTempAvatar] = useState("");
+  const [tempLoc, setTempLoc] = useState<LocationType | null>(null);
+
   useEffect(() => {
     (async () => {
       const a = await authStore.load();
@@ -66,6 +77,17 @@ export default function Dashboard() {
       api.getUsers().then((d) => setAvatarOptions(d.avatarOptions));
     })();
   }, []);
+
+  // Sync temp states when sheets open
+  useEffect(() => {
+    if (statusSheet && state) { setTempEmoji(state.bubbles[statusSheet].emoji); setTempText(state.bubbles[statusSheet].text); }
+  }, [statusSheet, state]);
+  useEffect(() => {
+    if (avatarSheet && state) setTempAvatar(state.avatars[avatarSheet]);
+  }, [avatarSheet, state]);
+  useEffect(() => {
+    if (locSheet && state) setTempLoc(state.locations[locSheet]);
+  }, [locSheet, state]);
 
   const me = auth?.user.id as UserId | undefined;
   const myColors = me ? getUserColors(me) : getUserColors("laury");
@@ -86,22 +108,28 @@ export default function Dashboard() {
     try { await api.addXP(amount); } catch {}
   };
 
-  const updateBubble = async (uid: UserId, bs: BubbleState) => {
-    optimistic((s) => ({ ...s, bubbles: { ...s.bubbles, [uid]: bs } }));
+  const applyStatus = async () => {
+    if (!statusSheet || !state) return;
+    const newBubbles = { ...state.bubbles, [statusSheet]: { emoji: tempEmoji, text: tempText.trim() || "Estado..." } };
+    optimistic((s) => ({ ...s, bubbles: newBubbles }));
     setStatusSheet(null);
-    try { await api.patchState({ bubbles: { ...state!.bubbles, [uid]: bs } } as any); } catch {}
+    try { await api.patchState({ bubbles: newBubbles } as any); } catch {}
   };
 
-  const updateAvatar = async (uid: UserId, url: string) => {
-    optimistic((s) => ({ ...s, avatars: { ...s.avatars, [uid]: url } }));
+  const applyAvatar = async () => {
+    if (!avatarSheet || !state || !tempAvatar) return;
+    const newAvatars = { ...state.avatars, [avatarSheet]: tempAvatar };
+    optimistic((s) => ({ ...s, avatars: newAvatars }));
     setAvatarSheet(null);
-    try { await api.patchState({ avatars: { ...state!.avatars, [uid]: url } } as any); } catch {}
+    try { await api.patchState({ avatars: newAvatars } as any); } catch {}
   };
 
-  const updateLocation = async (uid: UserId, loc: LocationType) => {
-    optimistic((s) => ({ ...s, locations: { ...s.locations, [uid]: loc } }));
+  const applyLocation = async () => {
+    if (!locSheet || !state || !tempLoc) return;
+    const newLocs = { ...state.locations, [locSheet]: tempLoc };
+    optimistic((s) => ({ ...s, locations: newLocs }));
     setLocSheet(null);
-    try { await api.patchState({ locations: { ...state!.locations, [uid]: loc } } as any); } catch {}
+    try { await api.patchState({ locations: newLocs } as any); } catch {}
   };
 
   const tapTogether = async () => {
@@ -125,7 +153,7 @@ export default function Dashboard() {
   const completeMission = async (uid: UserId, mid: string) => {
     try {
       const res = await api.completeMission(uid, mid);
-      optimistic((s) => ({ ...s, missions: res.missions, userData: res.userData }));
+      optimistic((s) => ({ ...s, missions: res.missions, userData: res.userData, coins: res.coins }));
       setGlowTick((g) => g + 1);
     } catch {}
   };
@@ -142,11 +170,12 @@ export default function Dashboard() {
   }
 
   const startDate = new Date(state.relationshipStartDate);
+  const coins = state.coins ?? { laury: 0, danny: 0 };
 
   return (
     <SafeAreaView style={styles.root} edges={["top", "bottom"]} testID="dashboard-screen">
       <ScrollView contentContainerStyle={{ paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
-        {/* Top: avatar + XP bar + heart + time counter */}
+        {/* Top: avatar + XP bar + heart, then TimeCounter centered below bar */}
         <View style={styles.topBox}>
           <View style={styles.topRow}>
             <View>
@@ -157,8 +186,8 @@ export default function Dashboard() {
                 <Ionicons name="log-out-outline" size={12} color={colors.text} />
               </Pressable>
             </View>
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: "row", gap: 6 }}>
+            <View style={styles.barCol}>
+              <View style={{ flexDirection: "row", gap: 6, alignItems: "stretch" }}>
                 <View style={{ flex: 1 }}>
                   <ProgressBar level={state.userData.level} currentXP={state.userData.currentXP} maxXP={100} userColor={myColors} triggerGlow={glowTick > 0} />
                 </View>
@@ -166,26 +195,52 @@ export default function Dashboard() {
                   <Ionicons name="heart" size={18} color={myColors.light} />
                 </Pressable>
               </View>
-              <View style={{ marginTop: 6, alignItems: "center" }}>
-                <TimeCounter startDate={startDate} color={myColors.light} glow={myColors.glow} />
+              <View style={{ marginTop: 8, alignSelf: "stretch", alignItems: "center" }}>
+                <TimeCounter startDate={startDate} />
               </View>
             </View>
           </View>
         </View>
 
-        {/* Logo */}
-        <View style={{ alignItems: "center", marginTop: 4 }}>
-          <Image source={{ uri: LOGO_URL }} style={{ width: W * 0.55, height: W * 0.32 }} resizeMode="contain" />
+        {/* Distance line — ABOVE cards */}
+        <View style={styles.distanceBox}>
+          {together && (
+            <Pressable onPress={tapTogether} style={[styles.togetherBtn, { borderColor: `${colors.together}66`, shadowColor: colors.together }]} testID="together-button">
+              <Text style={styles.togetherText}>♥ Estamos Juntos ♥</Text>
+              {plusOnes.map((id) => (
+                <View key={id} style={styles.plusOne} pointerEvents="none"><Text style={styles.plusOneText}>+1</Text></View>
+              ))}
+            </Pressable>
+          )}
+          <View style={styles.line}>
+            <LinearGradient colors={[userColors.laury.light, userColors.danny.light]} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={styles.lineBar} />
+            {[0, 25, 50, 75, 100].map((p) => (
+              <View key={p} style={[styles.lineDot, { left: `${p}%` }]} />
+            ))}
+            {!together ? (
+              <>
+                <Pressable onPress={() => me === "laury" && setLocSheet("laury")} style={[styles.lineHeart, { left: `${lauryX}%` }]} testID="laury-heart">
+                  <Ionicons name="heart" size={28} color={userColors.laury.light} />
+                </Pressable>
+                <Pressable onPress={() => me === "danny" && setLocSheet("danny")} style={[styles.lineHeart, { left: `${dannyX}%` }]} testID="danny-heart">
+                  <Ionicons name="heart" size={28} color={userColors.danny.light} />
+                </Pressable>
+              </>
+            ) : (
+              <Pressable onPress={() => setLocSheet(me)} style={[styles.lineHeart, { left: `${lauryX}%` }]}>
+                <Ionicons name="heart" size={36} color={colors.together} />
+              </Pressable>
+            )}
+          </View>
         </View>
 
-        {/* Character cards */}
+        {/* Character cards with avatar, name, coins counter, and action buttons */}
         <View style={styles.cardsRow}>
           {(["laury", "danny"] as UserId[]).map((uid) => {
             const uc = getUserColors(uid);
             const isMe = me === uid;
             return (
               <View key={uid} style={{ alignItems: "center" }}>
-                <Text style={[styles.nameLabel, { color: uc.light, textShadowColor: uc.glow }]}>{uid === "laury" ? "Laury" : "Danny"}</Text>
                 <Pressable
                   onPress={() => isMe && setAvatarSheet(uid)}
                   style={[styles.charCard, { width: CARD_W, height: CARD_H, borderColor: uc.light, shadowColor: uc.glow }]}
@@ -196,6 +251,11 @@ export default function Dashboard() {
                     <StatusBubble state={state.bubbles[uid]} isEditable={isMe} light={uc.light} glow={uc.glow} onPress={() => setStatusSheet(uid)} />
                   </View>
                 </Pressable>
+                <Text style={[styles.nameLabel, { color: uc.light, textShadowColor: uc.glow }]}>{uid === "laury" ? "Laury" : "Danny"}</Text>
+                <View style={[styles.coinPill, { borderColor: `${uc.light}66` }]} testID={`coins-${uid}`}>
+                  <CoinIcon size={16} />
+                  <Text style={[styles.coinText, { color: uc.light }]}>{coins[uid] ?? 0}</Text>
+                </View>
                 <View style={styles.cardBtns}>
                   <Pressable onPress={() => setMissionList(uid)} style={[styles.smallBtn, { borderColor: `${uc.light}55` }]} testID={`view-missions-${uid}`}>
                     <Ionicons name="list" size={12} color={uc.light} />
@@ -212,100 +272,93 @@ export default function Dashboard() {
             );
           })}
         </View>
-
-        {/* Distance line */}
-        <View style={styles.distanceBox}>
-          {together ? (
-            <Pressable onPress={tapTogether} style={[styles.togetherBtn, { borderColor: `${colors.together}66`, shadowColor: colors.together }]} testID="together-button">
-              <Text style={styles.togetherText}>♥ Estamos Juntos ♥</Text>
-              {plusOnes.map((id) => (
-                <View key={id} style={styles.plusOne} pointerEvents="none"><Text style={styles.plusOneText}>+1</Text></View>
-              ))}
-            </Pressable>
-          ) : <View style={{ height: 8 }} />}
-
-          <View style={styles.line}>
-            <LinearGradient colors={[getUserColors("laury").light, getUserColors("danny").light]} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={styles.lineBar} />
-            {[0, 25, 50, 75, 100].map((p) => (
-              <View key={p} style={[styles.lineDot, { left: `${p}%` }]} />
-            ))}
-            {!together && (
-              <>
-                <Pressable onPress={() => me === "laury" && setLocSheet("laury")} style={[styles.lineHeart, { left: `${lauryX}%` }]} testID="laury-heart">
-                  <Ionicons name="heart" size={28} color={getUserColors("laury").light} />
-                </Pressable>
-                <Pressable onPress={() => me === "danny" && setLocSheet("danny")} style={[styles.lineHeart, { left: `${dannyX}%` }]} testID="danny-heart">
-                  <Ionicons name="heart" size={28} color={getUserColors("danny").light} />
-                </Pressable>
-              </>
-            )}
-            {together && (
-              <Pressable onPress={() => setLocSheet(me)} style={[styles.lineHeart, { left: `${lauryX}%` }]}>
-                <Ionicons name="heart" size={36} color={colors.together} />
-              </Pressable>
-            )}
-          </View>
-          <Text style={styles.locHint}>Toca tu corazón para cambiar tu ubicación</Text>
-        </View>
       </ScrollView>
 
-      {/* Activity menu */}
+      {/* Activity menu — title centered + alternating colors Laury/Danny */}
       <NeonSheet visible={actMenu} onClose={() => setActMenu(false)} title="AÑADIR EXPERIENCIA" light={myColors.light} glow={myColors.glow}>
-        {ACTIVITIES.map((a) => (
-          <Pressable key={a.id} onPress={() => addXP(a.xp)} style={[styles.actRow, { borderLeftColor: myColors.light }]} testID={`activity-${a.id}`}>
-            <Text style={{ fontSize: 18 }}>{a.icon}</Text>
-            <Text style={[styles.actName]}>{a.name}</Text>
-            <Text style={[styles.actXp, { color: myColors.light }]}>+{a.xp}</Text>
-          </Pressable>
-        ))}
+        {ACTIVITIES.map((a, idx) => {
+          const altColors = idx % 2 === 0 ? userColors.laury : userColors.danny;
+          return (
+            <Pressable key={a.id} onPress={() => addXP(a.xp)} style={[styles.actRow, { borderLeftColor: altColors.light, shadowColor: altColors.glow }]} testID={`activity-${a.id}`}>
+              <Text style={{ fontSize: 18 }}>{a.icon}</Text>
+              <Text style={[styles.actName, { color: altColors.light }]}>{a.name}</Text>
+              <Text style={[styles.actXp, { color: altColors.light }]}>+{a.xp}</Text>
+            </Pressable>
+          );
+        })}
       </NeonSheet>
 
-      {/* Status sheet */}
+      {/* Status sheet — emoji grid + text input + Update */}
       <NeonSheet visible={!!statusSheet} onClose={() => setStatusSheet(null)} title="MI ESTADO" light={myColors.light} glow={myColors.glow}>
         {statusSheet && (
           <>
+            <View style={styles.statusPreview}>
+              <Text style={{ fontSize: 24 }}>{tempEmoji || "💜"}</Text>
+              <Text style={[styles.previewText, { color: myColors.light }]} numberOfLines={1}>{tempText || "Estado..."}</Text>
+            </View>
             <Text style={styles.sheetLbl}>EMOJI</Text>
             <View style={styles.emojiGrid}>
               {EMOJI_OPTIONS.map((e) => (
-                <Pressable key={e} onPress={() => updateBubble(statusSheet, { ...state.bubbles[statusSheet], emoji: e })} style={[styles.emojiBtn, state.bubbles[statusSheet].emoji === e && { borderColor: myColors.light, backgroundColor: `${myColors.light}22` }]} testID={`emoji-${e}`}>
+                <Pressable key={e} onPress={() => setTempEmoji(e)} style={[styles.emojiBtn, tempEmoji === e && { borderColor: myColors.light, backgroundColor: `${myColors.light}22` }]} testID={`emoji-${e}`}>
                   <Text style={{ fontSize: 20 }}>{e}</Text>
                 </Pressable>
               ))}
             </View>
             <Text style={styles.sheetLbl}>TEXTO</Text>
-            {STATE_TEXTS.map((t) => (
-              <Pressable key={t} onPress={() => updateBubble(statusSheet, { ...state.bubbles[statusSheet], text: t })} style={[styles.textRow, state.bubbles[statusSheet].text === t && { borderColor: myColors.light, backgroundColor: `${myColors.light}22` }]} testID={`text-${t}`}>
-                <Text style={{ color: colors.text, fontSize: 12 }}>{t}</Text>
-              </Pressable>
-            ))}
+            <TextInput
+              value={tempText}
+              onChangeText={setTempText}
+              placeholder="Escribe tu estado..."
+              placeholderTextColor={colors.textDim}
+              style={[styles.input, { borderColor: `${myColors.light}55` }]}
+              maxLength={32}
+              testID="status-text-input"
+            />
+            <Pressable onPress={applyStatus} style={[styles.updateBtn, { backgroundColor: `${myColors.light}22`, borderColor: myColors.light }]} testID="status-update-button">
+              <Text style={[styles.updateBtnText, { color: myColors.light }]}>ACTUALIZAR</Text>
+            </Pressable>
           </>
         )}
       </NeonSheet>
 
-      {/* Avatar sheet */}
+      {/* Avatar sheet — names instead of preview images + Update */}
       <NeonSheet visible={!!avatarSheet} onClose={() => setAvatarSheet(null)} title="CAMBIAR AVATAR" light={myColors.light} glow={myColors.glow}>
         {avatarSheet && (
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
+          <>
+            <View style={styles.avatarPreviewWrap}>
+              {tempAvatar ? <Image source={{ uri: tempAvatar }} style={styles.avatarPreview} /> : null}
+            </View>
+            <Text style={styles.sheetLbl}>OPCIONES</Text>
             {(avatarOptions[avatarSheet] || []).map((opt) => (
-              <Pressable key={opt.url} onPress={() => updateAvatar(avatarSheet, opt.url)} style={[styles.avatarOpt, state.avatars[avatarSheet] === opt.url && { borderColor: myColors.light, borderWidth: 3 }]} testID={`avatar-${opt.label}`}>
-                <Image source={{ uri: opt.url }} style={{ width: "100%", height: "100%" }} />
-                <Text style={styles.avatarOptLabel}>{opt.label}</Text>
+              <Pressable key={opt.url} onPress={() => setTempAvatar(opt.url)} style={[styles.optionRow, tempAvatar === opt.url && { borderColor: myColors.light, backgroundColor: `${myColors.light}22` }]} testID={`avatar-${opt.label}`}>
+                <Ionicons name={tempAvatar === opt.url ? "radio-button-on" : "radio-button-off"} size={18} color={myColors.light} />
+                <Text style={{ color: colors.text, fontSize: 13, fontWeight: "600" }}>{opt.label}</Text>
               </Pressable>
             ))}
-          </View>
+            <Pressable onPress={applyAvatar} style={[styles.updateBtn, { backgroundColor: `${myColors.light}22`, borderColor: myColors.light }]} testID="avatar-update-button">
+              <Text style={[styles.updateBtnText, { color: myColors.light }]}>ACTUALIZAR</Text>
+            </Pressable>
+          </>
         )}
       </NeonSheet>
 
-      {/* Location sheet */}
+      {/* Location sheet with Update */}
       <NeonSheet visible={!!locSheet} onClose={() => setLocSheet(null)} title="MI UBICACIÓN" light={myColors.light} glow={myColors.glow}>
-        {locSheet && (locSheet === "laury" ? LAURY_LOCS : DANNY_LOCS).map((o) => (
-          <Pressable key={o.id} onPress={() => updateLocation(locSheet, o.id)} style={[styles.textRow, state.locations[locSheet] === o.id && { borderColor: myColors.light, backgroundColor: `${myColors.light}22` }]} testID={`loc-${o.id}`}>
-            <Text style={{ color: colors.text, fontSize: 12 }}>{o.label}</Text>
-          </Pressable>
-        ))}
+        {locSheet && (
+          <>
+            {(locSheet === "laury" ? LAURY_LOCS : DANNY_LOCS).map((o) => (
+              <Pressable key={o.id} onPress={() => setTempLoc(o.id)} style={[styles.optionRow, tempLoc === o.id && { borderColor: myColors.light, backgroundColor: `${myColors.light}22` }]} testID={`loc-${o.id}`}>
+                <Ionicons name={tempLoc === o.id ? "radio-button-on" : "radio-button-off"} size={18} color={myColors.light} />
+                <Text style={{ color: colors.text, fontSize: 13, fontWeight: "600" }}>{o.label}</Text>
+              </Pressable>
+            ))}
+            <Pressable onPress={applyLocation} style={[styles.updateBtn, { backgroundColor: `${myColors.light}22`, borderColor: myColors.light }]} testID="loc-update-button">
+              <Text style={[styles.updateBtnText, { color: myColors.light }]}>ACTUALIZAR</Text>
+            </Pressable>
+          </>
+        )}
       </NeonSheet>
 
-      {/* Mission creator */}
       {missionCreate && (
         <MissionCreator
           visible={!!missionCreate}
@@ -317,7 +370,6 @@ export default function Dashboard() {
         />
       )}
 
-      {/* Mission list */}
       {missionList && (
         <MissionList
           visible={!!missionList}
@@ -341,15 +393,18 @@ const styles = StyleSheet.create({
   topRow: { flexDirection: "row", gap: 10, alignItems: "flex-start" },
   meAvatar: { width: 52, height: 52, borderRadius: 26, overflow: "hidden", borderWidth: 2, shadowOpacity: 0.6, shadowRadius: 8 },
   logoutBtn: { position: "absolute", bottom: -4, right: -4, width: 22, height: 22, borderRadius: 11, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" },
+  barCol: { flex: 1 },
   heartBtn: { width: 38, borderRadius: 8, borderWidth: 1.5, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center", shadowOpacity: 0.4, shadowRadius: 8 },
-  cardsRow: { flexDirection: "row", justifyContent: "space-around", paddingHorizontal: 12, marginTop: 4, gap: 16 },
-  nameLabel: { fontSize: 16, fontWeight: "900", letterSpacing: 1, marginBottom: 8, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 10 },
-  charCard: { borderRadius: 18, borderWidth: 2, overflow: "hidden", shadowOpacity: 0.5, shadowRadius: 14 },
+  cardsRow: { flexDirection: "row", justifyContent: "space-around", paddingHorizontal: 12, marginTop: 16, gap: 16 },
+  nameLabel: { fontSize: 16, fontWeight: "900", letterSpacing: 1, marginTop: 8, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 10 },
+  coinPill: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1.5, backgroundColor: colors.surface, marginTop: 6 },
+  coinText: { fontSize: 12, fontWeight: "900", letterSpacing: 0.5 },
+  charCard: { borderRadius: 18, borderWidth: 2, overflow: "hidden", shadowOpacity: 0.5, shadowRadius: 14, backgroundColor: colors.bg },
   bubbleWrap: { position: "absolute", top: 10, alignSelf: "center", left: 0, right: 0, alignItems: "center" },
   cardBtns: { marginTop: 8, gap: 6, width: CARD_W },
   smallBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8, borderWidth: 1.5, backgroundColor: colors.surface, justifyContent: "center" },
   smallBtnText: { fontSize: 9.5, fontWeight: "900", letterSpacing: 1 },
-  distanceBox: { marginTop: 16, paddingHorizontal: 20, alignItems: "center" },
+  distanceBox: { marginTop: 18, paddingHorizontal: 20, alignItems: "center" },
   togetherBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12, borderWidth: 1.5, backgroundColor: colors.surface, shadowOpacity: 0.5, shadowRadius: 10, marginBottom: 8 },
   togetherText: { color: colors.together, fontWeight: "900", letterSpacing: 1, fontSize: 13 },
   plusOne: { position: "absolute", top: -20, alignSelf: "center" },
@@ -358,14 +413,18 @@ const styles = StyleSheet.create({
   lineBar: { height: 3, borderRadius: 2 },
   lineDot: { position: "absolute", width: 8, height: 8, borderRadius: 4, backgroundColor: colors.together, marginLeft: -4, top: "50%", marginTop: -4 },
   lineHeart: { position: "absolute", marginLeft: -14, top: "50%", marginTop: -14 },
-  locHint: { color: colors.textDim, fontSize: 10, marginTop: 6, fontStyle: "italic" },
-  actRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 10, paddingVertical: 10, borderLeftWidth: 3, backgroundColor: colors.bg, marginBottom: 6, borderRadius: 6 },
-  actName: { color: colors.text, fontSize: 12, fontWeight: "600", flex: 1 },
+  actRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 10, paddingVertical: 10, borderLeftWidth: 3, backgroundColor: colors.bg, marginBottom: 6, borderRadius: 6, shadowOpacity: 0.3, shadowRadius: 4, shadowOffset: { width: 0, height: 0 } },
+  actName: { fontSize: 12, fontWeight: "700", flex: 1 },
   actXp: { fontSize: 12, fontWeight: "900" },
-  sheetLbl: { color: colors.text, fontSize: 10, fontWeight: "800", letterSpacing: 1.4, marginTop: 6, marginBottom: 6 },
+  sheetLbl: { color: colors.text, fontSize: 10, fontWeight: "800", letterSpacing: 1.4, marginTop: 8, marginBottom: 6 },
+  statusPreview: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 12, borderWidth: 1.5, borderColor: "rgba(255,255,255,0.1)", backgroundColor: colors.bg, marginBottom: 6 },
+  previewText: { fontSize: 14, fontWeight: "700", flex: 1 },
   emojiGrid: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 4 },
-  emojiBtn: { width: 44, height: 44, borderRadius: 10, borderWidth: 1.5, borderColor: "rgba(255,255,255,0.1)", alignItems: "center", justifyContent: "center", backgroundColor: colors.bg },
-  textRow: { paddingHorizontal: 12, paddingVertical: 10, borderRadius: 8, borderWidth: 1.5, borderColor: "rgba(255,255,255,0.1)", marginBottom: 6, backgroundColor: colors.bg },
-  avatarOpt: { width: 90, height: 110, borderRadius: 12, overflow: "hidden", borderWidth: 1.5, borderColor: "rgba(255,255,255,0.1)", backgroundColor: colors.bg },
-  avatarOptLabel: { position: "absolute", bottom: 0, left: 0, right: 0, color: colors.text, fontSize: 10, fontWeight: "700", textAlign: "center", backgroundColor: "rgba(0,0,0,0.6)", paddingVertical: 2 },
+  emojiBtn: { width: 40, height: 40, borderRadius: 10, borderWidth: 1.5, borderColor: "rgba(255,255,255,0.1)", alignItems: "center", justifyContent: "center", backgroundColor: colors.bg },
+  input: { backgroundColor: colors.bg, borderWidth: 1.5, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, color: colors.text, fontSize: 14 },
+  optionRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, borderWidth: 1.5, borderColor: "rgba(255,255,255,0.1)", marginBottom: 6, backgroundColor: colors.bg },
+  updateBtn: { marginTop: 14, paddingVertical: 12, borderRadius: 10, borderWidth: 1.5, alignItems: "center" },
+  updateBtnText: { fontSize: 12, fontWeight: "900", letterSpacing: 2 },
+  avatarPreviewWrap: { alignItems: "center", marginBottom: 6 },
+  avatarPreview: { width: 110, height: 110, borderRadius: 14, backgroundColor: colors.bg },
 });

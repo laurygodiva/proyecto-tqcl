@@ -30,7 +30,7 @@ export default function SelectScreen() {
         <Ionicons name="chevron-back" size={22} color={colors.text} />
       </Pressable>
 
-      <Text style={styles.title}>SELECCIONA{"\n"}UN JUGADOR</Text>
+      <Text style={styles.title}>SELECCIONA{"\n"}UN PERSONAJE</Text>
 
       <ScrollView contentContainerStyle={styles.cards} showsVerticalScrollIndicator={false}>
         <View style={styles.row}>
@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   backBtn: { position: "absolute", top: 50, left: 16, zIndex: 10, padding: 8, backgroundColor: colors.surface, borderRadius: 20 },
   title: { color: colors.text, fontSize: 16, fontWeight: "900", letterSpacing: 3, textAlign: "center", marginTop: 60, marginBottom: 20, lineHeight: 22 },
-  cards: { paddingHorizontal: 16, paddingBottom: 40, alignItems: "center" },
+  cards: { paddingHorizontal: 16, paddingBottom: 40, alignItems: "center", flexGrow: 1, justifyContent: "center" },
   row: { flexDirection: "row", gap: 20, justifyContent: "center", alignItems: "flex-start" },
   card: {
     width: CARD_W,

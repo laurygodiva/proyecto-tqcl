@@ -7,7 +7,7 @@ import Animated, {
   withTiming,
   withSequence,
 } from "react-native-reanimated";
-import { colors } from "../lib/colors";
+import { colors, userColors } from "../lib/colors";
 
 interface Props {
   level: number;
@@ -47,7 +47,10 @@ export default function ProgressBar({ level, currentXP, maxXP, userColor, trigge
       testID="progress-bar"
     >
       <View style={styles.topRow}>
-        <Text style={[styles.label, { color: colors.text }]}>NIVEL DE VÍNCULO</Text>
+        <View style={styles.levelRow}>
+          <Text style={[styles.lvlLabel, { color: colors.textDim }]}>LVL</Text>
+          <Text style={[styles.levelText, { color: userColor.light, textShadowColor: userColor.glow }]}>{level}</Text>
+        </View>
         <Text style={[styles.xp, { color: userColor.light }]}>
           {currentXP}/{maxXP} XP
         </Text>
@@ -55,7 +58,7 @@ export default function ProgressBar({ level, currentXP, maxXP, userColor, trigge
       <View style={styles.barOuter}>
         <Animated.View style={[styles.barFillWrap, fillStyle]}>
           <LinearGradient
-            colors={[userColor.light, userColor.shadow]}
+            colors={[userColors.laury.light, userColors.laury.shadow, userColors.danny.shadow, userColors.danny.light]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={StyleSheet.absoluteFill}
@@ -68,9 +71,6 @@ export default function ProgressBar({ level, currentXP, maxXP, userColor, trigge
             ]}
           />
         </Animated.View>
-        <View style={[styles.levelBubble, { borderColor: userColor.light }]}>
-          <Text style={[styles.levelText, { color: userColor.light }]}>{level}</Text>
-        </View>
       </View>
     </View>
   );
@@ -87,29 +87,21 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 0 },
   },
-  topRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
-  label: { fontSize: 8.5, fontWeight: "800", letterSpacing: 1 },
+  topRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
+  levelRow: { flexDirection: "row", alignItems: "baseline", gap: 4 },
+  lvlLabel: { fontSize: 8.5, fontWeight: "700", letterSpacing: 1 },
+  levelText: {
+    fontSize: 16,
+    fontWeight: "900",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
+  },
   xp: { fontSize: 9, fontWeight: "700" },
   barOuter: {
-    height: 14,
+    height: 12,
     backgroundColor: colors.bg,
-    borderRadius: 7,
+    borderRadius: 6,
     overflow: "hidden",
-    justifyContent: "center",
-    position: "relative",
   },
-  barFillWrap: { height: "100%", borderRadius: 7, overflow: "hidden" },
-  levelBubble: {
-    position: "absolute",
-    alignSelf: "center",
-    minWidth: 22,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 1.5,
-    backgroundColor: colors.bg,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 4,
-  },
-  levelText: { fontSize: 11, fontWeight: "900" },
+  barFillWrap: { height: "100%", borderRadius: 6, overflow: "hidden" },
 });

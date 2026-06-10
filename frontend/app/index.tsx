@@ -48,7 +48,6 @@ export default function LoadingScreen() {
     <View style={styles.root} testID="loading-screen">
       <FallingHearts side="left" count={6} />
       <FallingHearts side="right" count={6} />
-      <Animated.View style={[styles.glowCenter, glowStyle]} />
 
       <Animated.View style={[styles.logoWrap, floatStyle]}>
         <Image source={{ uri: LOGO_URL }} style={styles.logo} resizeMode="contain" />

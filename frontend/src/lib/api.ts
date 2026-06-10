@@ -53,6 +53,7 @@ export interface Mission {
   description: string;
   rarity: MissionRarity;
   reward: number;
+  coinReward?: number;
   createdBy: UserId;
   createdAt: string;
   completed: boolean;
@@ -65,6 +66,7 @@ export interface CoupleState {
   avatars: Record<UserId, string>;
   locations: Record<UserId, LocationType>;
   missions: Record<UserId, Mission[]>;
+  coins: Record<UserId, number>;
   achievements: Record<UserId, any[]>;
   relationshipStartDate: string;
   lastUpdated: string;
@@ -92,7 +94,7 @@ export const api = {
     reward: number;
   }) => request<Mission>("/state/missions/create", { method: "POST", body: JSON.stringify(data) }),
   completeMission: (targetUser: UserId, missionId: string) =>
-    request<{ missions: Record<UserId, Mission[]>; userData: UserData; rewardGranted: number }>(
+    request<{ missions: Record<UserId, Mission[]>; userData: UserData; coins: Record<UserId, number>; rewardGranted: number; coinsGranted: number }>(
       "/state/missions/complete",
       { method: "POST", body: JSON.stringify({ targetUser, missionId }) },
     ),
