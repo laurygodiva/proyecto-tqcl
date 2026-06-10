@@ -62,6 +62,7 @@ export default function Dashboard() {
   const [missionList, setMissionList] = useState<UserId | null>(null);
   const [achCreate, setAchCreate] = useState<UserId | null>(null);
   const [achList, setAchList] = useState<UserId | null>(null);
+  const [openMenu, setOpenMenu] = useState<UserId | null>(null);
   const [glowTick, setGlowTick] = useState(0);
   const [avatarOptions, setAvatarOptions] = useState<Record<UserId, { label: string; url: string }[]>>({ laury: [], danny: [] });
   const [plusOnes, setPlusOnes] = useState<number[]>([]);
@@ -81,16 +82,19 @@ export default function Dashboard() {
     })();
   }, []);
 
-  // Sync temp states when sheets open
+  // Sync temp states only when sheet OPENS (not on every state change)
   useEffect(() => {
     if (statusSheet && state) { setTempEmoji(state.bubbles[statusSheet].emoji); setTempText(state.bubbles[statusSheet].text); }
-  }, [statusSheet, state]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusSheet]);
   useEffect(() => {
     if (avatarSheet && state) setTempAvatar(state.avatars[avatarSheet]);
-  }, [avatarSheet, state]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [avatarSheet]);
   useEffect(() => {
     if (locSheet && state) setTempLoc(state.locations[locSheet]);
-  }, [locSheet, state]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locSheet]);
 
   const me = auth?.user.id as UserId | undefined;
   const myColors = me ? getUserColors(me) : getUserColors("laury");
@@ -204,8 +208,8 @@ export default function Dashboard() {
                   <Ionicons name="log-out-outline" size={12} color={colors.text} />
                 </Pressable>
               </View>
-              <View style={[styles.coinPill, { borderColor: `${myColors.light}66`, marginTop: 8 }]} testID={`my-coins`}>
-                <CoinIcon size={14} />
+              <View style={[styles.coinPillFlat, { marginTop: 8 }]} testID={`my-coins`}>
+                <CoinIcon size={16} />
                 <Text style={[styles.coinText, { color: myColors.light }]}>{coins[me] ?? 0}</Text>
               </View>
             </View>
@@ -264,7 +268,9 @@ export default function Dashboard() {
             const isMe = me === uid;
             return (
               <View key={uid} style={{ alignItems: "center" }}>
-                <Text style={[styles.nameLabel, { color: uc.light, textShadowColor: uc.glow }]}>{uid === "laury" ? "Laury" : "Danny"}</Text>
+                <Pressable onPress={() => setOpenMenu(openMenu === uid ? null : uid)} testID={`name-${uid}`}>
+                  <Text style={[styles.nameLabel, { color: uc.light, textShadowColor: uc.glow }]}>{uid === "laury" ? "Laury" : "Danny"} ▾</Text>
+                </Pressable>
                 <Pressable
                   onPress={() => isMe && setAvatarSheet(uid)}
                   style={[styles.charCard, { width: CARD_W, height: CARD_H, borderColor: uc.light, shadowColor: uc.glow }]}
@@ -275,28 +281,30 @@ export default function Dashboard() {
                     <StatusBubble state={state.bubbles[uid]} isEditable={isMe} light={uc.light} glow={uc.glow} onPress={() => setStatusSheet(uid)} />
                   </View>
                 </Pressable>
-                <View style={styles.cardBtns}>
-                  <Pressable onPress={() => setMissionList(uid)} style={[styles.smallBtn, { borderColor: `${uc.light}55` }]} testID={`view-missions-${uid}`}>
-                    <Ionicons name="list" size={12} color={uc.light} />
-                    <Text style={[styles.smallBtnText, { color: uc.light }]}>MISIONES ({state.missions[uid].length})</Text>
-                  </Pressable>
-                  {!isMe && (
-                    <Pressable onPress={() => setMissionCreate(uid)} style={[styles.smallBtn, { borderColor: `${uc.light}55` }]} testID={`create-mission-${uid}`}>
-                      <Ionicons name="add" size={12} color={uc.light} />
-                      <Text style={[styles.smallBtnText, { color: uc.light }]}>CREAR MISIÓN</Text>
+                {openMenu === uid && (
+                  <View style={styles.cardBtns}>
+                    {!isMe && (
+                      <Pressable onPress={() => { setMissionCreate(uid); setOpenMenu(null); }} style={[styles.smallBtn, { borderColor: `${uc.light}55` }]} testID={`create-mission-${uid}`}>
+                        <Ionicons name="add" size={12} color={uc.light} />
+                        <Text style={[styles.smallBtnText, { color: uc.light }]}>CREAR MISIÓN</Text>
+                      </Pressable>
+                    )}
+                    <Pressable onPress={() => { setMissionList(uid); setOpenMenu(null); }} style={[styles.smallBtn, { borderColor: `${uc.light}55` }]} testID={`view-missions-${uid}`}>
+                      <Ionicons name="list" size={12} color={uc.light} />
+                      <Text style={[styles.smallBtnText, { color: uc.light }]}>MISIONES ({state.missions[uid].length})</Text>
                     </Pressable>
-                  )}
-                  <Pressable onPress={() => setAchList(uid)} style={[styles.smallBtn, { borderColor: `${uc.light}55` }]} testID={`view-achievements-${uid}`}>
-                    <Ionicons name="trophy" size={12} color={uc.light} />
-                    <Text style={[styles.smallBtnText, { color: uc.light }]}>LOGROS ({(state.achievements?.[uid] || []).length})</Text>
-                  </Pressable>
-                  {!isMe && (
-                    <Pressable onPress={() => setAchCreate(uid)} style={[styles.smallBtn, { borderColor: `${uc.light}55` }]} testID={`create-achievement-${uid}`}>
-                      <Ionicons name="add" size={12} color={uc.light} />
-                      <Text style={[styles.smallBtnText, { color: uc.light }]}>CREAR LOGRO</Text>
+                    {!isMe && (
+                      <Pressable onPress={() => { setAchCreate(uid); setOpenMenu(null); }} style={[styles.smallBtn, { borderColor: `${uc.light}55` }]} testID={`create-achievement-${uid}`}>
+                        <Ionicons name="add" size={12} color={uc.light} />
+                        <Text style={[styles.smallBtnText, { color: uc.light }]}>CREAR LOGRO</Text>
+                      </Pressable>
+                    )}
+                    <Pressable onPress={() => { setAchList(uid); setOpenMenu(null); }} style={[styles.smallBtn, { borderColor: `${uc.light}55` }]} testID={`view-achievements-${uid}`}>
+                      <Ionicons name="trophy" size={12} color={uc.light} />
+                      <Text style={[styles.smallBtnText, { color: uc.light }]}>LOGROS ({(state.achievements?.[uid] || []).length})</Text>
                     </Pressable>
-                  )}
-                </View>
+                  </View>
+                )}
               </View>
             );
           })}
@@ -451,6 +459,7 @@ const styles = StyleSheet.create({
   cardsRow: { flexDirection: "row", justifyContent: "space-around", paddingHorizontal: 12, marginTop: 16, gap: 16 },
   nameLabel: { fontSize: 16, fontWeight: "900", letterSpacing: 1, marginBottom: 8, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 10 },
   coinPill: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1.5, backgroundColor: colors.surface, marginTop: 6 },
+  coinPillFlat: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 4, paddingVertical: 2 },
   coinText: { fontSize: 12, fontWeight: "900", letterSpacing: 0.5 },
   charCard: { borderRadius: 18, borderWidth: 2, overflow: "hidden", shadowOpacity: 0.5, shadowRadius: 14, backgroundColor: colors.bg },
   bubbleWrap: { position: "absolute", top: 10, alignSelf: "center", left: 0, right: 0, alignItems: "center" },

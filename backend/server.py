@@ -55,8 +55,11 @@ USERS = {
 LAURY_PORTRAIT = "https://customer-assets.emergentagent.com/job_ios-sync-app/artifacts/zjnsflg7_laury.png"
 DANNY_PORTRAIT = "https://customer-assets.emergentagent.com/job_ios-sync-app/artifacts/zdg6ii1f_danny.png"
 
-LAURY_PC = "https://i.postimg.cc/wxNJNTps/2.png"
-DANNY_PC = "https://i.postimg.cc/BbFxQJqb/1.png"
+LAURY_PC = "https://customer-assets.emergentagent.com/job_ios-sync-app/artifacts/fx0e8bx2_laury%20en%20el%20pc.png"
+DANNY_PC = "https://customer-assets.emergentagent.com/job_ios-sync-app/artifacts/6n2h89aa_danny%20en%20el%20pc.png"
+LAURY_SLEEP = "https://customer-assets.emergentagent.com/job_ios-sync-app/artifacts/wcfmdl4y_laury%20durmiendo.png"
+DANNY_SLEEP = "https://customer-assets.emergentagent.com/job_ios-sync-app/artifacts/ad6ttesj_danny%20durmiendo.png"
+DANNY_WORK = "https://customer-assets.emergentagent.com/job_ios-sync-app/artifacts/rn130yaq_danny%20trabajando.png"
 
 DEFAULT_AVATARS = {
     "laury": LAURY_PC,
@@ -66,12 +69,12 @@ DEFAULT_AVATARS = {
 AVATAR_OPTIONS = {
     "laury": [
         {"label": "En el PC", "url": LAURY_PC},
-        {"label": "Durmiendo", "url": "https://i.postimg.cc/6qx8cnXQ/4.png"},
+        {"label": "Durmiendo", "url": LAURY_SLEEP},
     ],
     "danny": [
         {"label": "En el PC", "url": DANNY_PC},
-        {"label": "Durmiendo", "url": "https://i.postimg.cc/VvFkFhgD/3.png"},
-        {"label": "Trabajando", "url": "https://i.postimg.cc/8cT1sHGn/Copia-de-it-takes-two-(1).png"},
+        {"label": "Durmiendo", "url": DANNY_SLEEP},
+        {"label": "Trabajando", "url": DANNY_WORK},
     ],
 }
 
