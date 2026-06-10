@@ -58,7 +58,7 @@ export default function ProgressBar({ level, currentXP, maxXP, userColor, trigge
       <View style={styles.barOuter}>
         <Animated.View style={[styles.barFillWrap, fillStyle]}>
           <LinearGradient
-            colors={[userColors.laury.light, userColors.laury.shadow, userColors.danny.shadow, userColors.danny.light]}
+            colors={[userColors.laury.light, userColors.danny.light]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={StyleSheet.absoluteFill}

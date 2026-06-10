@@ -32,7 +32,7 @@ USERS = {
         "birthday": "13/04/1997",
         "zodiac": "Aries",
         "skills": "Artista Polivalente, Programadora, Tatuadora",
-        "avatar": "https://i.postimg.cc/zvmn610n/1.png",
+        "avatar": "https://customer-assets.emergentagent.com/job_ios-sync-app/artifacts/zjnsflg7_laury.png",
         "primary": "#D869FE",
         "glow": "#E89DFE",
         "dark": "#5D25DC",
@@ -45,7 +45,7 @@ USERS = {
         "birthday": "01/09/1998",
         "zodiac": "Virgo",
         "skills": "Electricista, Tirador de élite, Sueño ligero",
-        "avatar": "https://i.postimg.cc/2SHnmW0r/Diseno-sin-titulo-(3).png",
+        "avatar": "https://customer-assets.emergentagent.com/job_ios-sync-app/artifacts/zdg6ii1f_danny.png",
         "primary": "#27DFFE",
         "glow": "#5DEDFE",
         "dark": "#0E5BE5",
@@ -55,18 +55,21 @@ USERS = {
 LAURY_PORTRAIT = "https://customer-assets.emergentagent.com/job_ios-sync-app/artifacts/zjnsflg7_laury.png"
 DANNY_PORTRAIT = "https://customer-assets.emergentagent.com/job_ios-sync-app/artifacts/zdg6ii1f_danny.png"
 
+LAURY_PC = "https://i.postimg.cc/wxNJNTps/2.png"
+DANNY_PC = "https://i.postimg.cc/BbFxQJqb/1.png"
+
 DEFAULT_AVATARS = {
-    "laury": LAURY_PORTRAIT,
-    "danny": DANNY_PORTRAIT,
+    "laury": LAURY_PC,
+    "danny": DANNY_PC,
 }
 
 AVATAR_OPTIONS = {
     "laury": [
-        {"label": "En el PC", "url": LAURY_PORTRAIT},
+        {"label": "En el PC", "url": LAURY_PC},
         {"label": "Durmiendo", "url": "https://i.postimg.cc/6qx8cnXQ/4.png"},
     ],
     "danny": [
-        {"label": "En el PC", "url": DANNY_PORTRAIT},
+        {"label": "En el PC", "url": DANNY_PC},
         {"label": "Durmiendo", "url": "https://i.postimg.cc/VvFkFhgD/3.png"},
         {"label": "Trabajando", "url": "https://i.postimg.cc/8cT1sHGn/Copia-de-it-takes-two-(1).png"},
     ],
@@ -119,6 +122,20 @@ class MissionCreate(BaseModel):
 class MissionAction(BaseModel):
     targetUser: Literal["laury", "danny"]
     missionId: str
+
+
+class AchievementCreate(BaseModel):
+    targetUser: Literal["laury", "danny"]
+    createdBy: Literal["laury", "danny"]
+    name: str
+    description: str
+    rarity: Literal["comun", "rara", "epica", "legendaria"]
+    imageUrl: Optional[str] = None
+
+
+class AchievementAction(BaseModel):
+    targetUser: Literal["laury", "danny"]
+    achievementId: str
 
 
 # ============ Helpers ============
@@ -250,6 +267,43 @@ async def delete_mission(req: MissionAction):
         {"$set": {"missions": missions, "lastUpdated": datetime.now(timezone.utc).isoformat()}},
     )
     return {"missions": missions}
+
+
+@api_router.post("/state/achievements/create")
+async def create_achievement(req: AchievementCreate):
+    doc = await ensure_state()
+    achievements = doc.get("achievements", {"laury": [], "danny": []})
+    if isinstance(achievements.get(req.targetUser), list) is False:
+        achievements[req.targetUser] = []
+    new_ach = {
+        "id": f"a_{uuid.uuid4().hex[:10]}",
+        "name": req.name,
+        "description": req.description,
+        "rarity": req.rarity,
+        "imageUrl": req.imageUrl,
+        "createdBy": req.createdBy,
+        "createdAt": datetime.now(timezone.utc).isoformat(),
+    }
+    achievements.setdefault(req.targetUser, []).append(new_ach)
+    await db.state.update_one(
+        {"_id": COUPLE_DOC_ID},
+        {"$set": {"achievements": achievements, "lastUpdated": datetime.now(timezone.utc).isoformat()}},
+    )
+    return new_ach
+
+
+@api_router.post("/state/achievements/delete")
+async def delete_achievement(req: AchievementAction):
+    doc = await ensure_state()
+    achievements = doc.get("achievements", {"laury": [], "danny": []})
+    if not isinstance(achievements.get(req.targetUser), list):
+        achievements[req.targetUser] = []
+    achievements[req.targetUser] = [a for a in achievements.get(req.targetUser, []) if a.get("id") != req.achievementId]
+    await db.state.update_one(
+        {"_id": COUPLE_DOC_ID},
+        {"$set": {"achievements": achievements, "lastUpdated": datetime.now(timezone.utc).isoformat()}},
+    )
+    return {"achievements": achievements}
 
 @api_router.post("/state/reset")
 async def reset_state():

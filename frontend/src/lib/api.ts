@@ -60,6 +60,16 @@ export interface Mission {
   completedAt?: string;
 }
 
+export interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  rarity: MissionRarity;
+  imageUrl?: string | null;
+  createdBy: UserId;
+  createdAt: string;
+}
+
 export interface CoupleState {
   userData: UserData;
   bubbles: Record<UserId, BubbleState>;
@@ -67,7 +77,7 @@ export interface CoupleState {
   locations: Record<UserId, LocationType>;
   missions: Record<UserId, Mission[]>;
   coins: Record<UserId, number>;
-  achievements: Record<UserId, any[]>;
+  achievements: Record<UserId, Achievement[]>;
   relationshipStartDate: string;
   lastUpdated: string;
 }
@@ -102,6 +112,19 @@ export const api = {
     request<{ missions: Record<UserId, Mission[]> }>("/state/missions/delete", {
       method: "POST",
       body: JSON.stringify({ targetUser, missionId }),
+    }),
+  createAchievement: (data: {
+    targetUser: UserId;
+    createdBy: UserId;
+    name: string;
+    description: string;
+    rarity: MissionRarity;
+    imageUrl?: string;
+  }) => request<Achievement>("/state/achievements/create", { method: "POST", body: JSON.stringify(data) }),
+  deleteAchievement: (targetUser: UserId, achievementId: string) =>
+    request<{ achievements: Record<UserId, Achievement[]> }>("/state/achievements/delete", {
+      method: "POST",
+      body: JSON.stringify({ targetUser, achievementId }),
     }),
 };
 
